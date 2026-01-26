@@ -1,0 +1,8 @@
+{
+  "name": "Mandi Mitra",
+  "description": "Voice-first multilingual agricultural trade platform empowering Indian farmers and buyers.",
+  "requestFramePermissions": [
+    "microphone",
+    "geolocation"
+  ]
+}

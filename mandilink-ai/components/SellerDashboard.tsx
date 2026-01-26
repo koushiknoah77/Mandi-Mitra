@@ -1,0 +1,274 @@
+import React, { useState } from 'react';
+import { UserProfile, ListingData, Listing, UserRole } from '../types';
+import { geminiService } from '../services/geminiService';
+import { cloudinaryService } from '../services/cloudinaryService';
+import { analyticsService } from '../services/analyticsService';
+import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
+import { VoiceIndicator } from './VoiceIndicator';
+import { NegotiationView } from './NegotiationView';
+import { LiveMarketTicker } from './LiveMarketTicker';
+import { getLabel } from '../utils/translations';
+
+interface SellerDashboardProps {
+  user: UserProfile;
+}
+
+export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
+  const [listingText, setListingText] = useState("");
+  const [extractedData, setExtractedData] = useState<ListingData | null>(null);
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [activeTab, setActiveTab] = useState<'create' | 'my-listings'>('create');
+  
+  const [myListings, setMyListings] = useState<Listing[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [activeNegotiationListing, setActiveNegotiationListing] = useState<Listing | null>(null);
+
+  const { state: voiceState, speak, listen, cancel } = useVoiceAssistant(user.language);
+
+  const handleExtract = async (text: string) => {
+    setIsExtracting(true);
+    try {
+      const data = await geminiService.extractListingData(text);
+      setExtractedData(data);
+      analyticsService.logEvent('listing_extract_success', user.id);
+    } catch (e) {
+      console.error(e);
+      analyticsService.logEvent('listing_extract_fail', user.id);
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const handleVoiceInput = async () => {
+    if (voiceState.isSpeaking) {
+      cancel();
+      return;
+    }
+    const transcript = await listen();
+    if (transcript) {
+      setListingText(transcript);
+      handleExtract(transcript);
+    }
+  };
+
+  const handleImageSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setIsUploading(true);
+      try {
+        const url = await cloudinaryService.uploadImage(file);
+        setUploadedImages(prev => [...prev, url]);
+        analyticsService.logEvent('image_upload_success', user.id);
+      } catch (err) {
+        console.error("Upload failed", err);
+      } finally {
+        setIsUploading(false);
+      }
+    }
+  };
+
+  const handleRemoveImage = (index: number) => {
+    setUploadedImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const handleCreate = () => {
+    if (!extractedData) return;
+    const newListing: Listing = {
+      id: Date.now().toString(),
+      sellerId: user.id,
+      sellerName: "Me",
+      location: user.location?.address || "Local Mandi",
+      coordinates: user.location ? { lat: user.location.lat, lng: user.location.lng } : undefined,
+      produceName: extractedData.produceName,
+      quantity: extractedData.quantity,
+      unit: extractedData.unit,
+      pricePerUnit: extractedData.pricePerUnit,
+      currency: extractedData.currency,
+      quality: extractedData.quality,
+      description: extractedData.description,
+      images: uploadedImages,
+      imageUrl: uploadedImages[0], 
+      createdAt: new Date().toISOString()
+    };
+
+    setMyListings(prev => [newListing, ...prev]);
+    analyticsService.logEvent('listing_created', user.id, { produce: extractedData?.produceName });
+    setExtractedData(null);
+    setListingText("");
+    setUploadedImages([]);
+    setActiveTab('my-listings');
+  };
+
+  return (
+    <div className="p-4 sm:p-8 max-w-4xl mx-auto font-sans">
+      {/* Modern Segmented Control */}
+      <div className="flex justify-center mb-12">
+        <div className="bg-white p-1.5 rounded-full inline-flex relative shadow-sm border border-slate-200">
+          <button 
+            onClick={() => setActiveTab('create')}
+            className={`px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 z-10 flex items-center gap-2 ${
+              activeTab === 'create' 
+                ? 'bg-slate-900 text-white shadow-md' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {activeTab === 'create' && <span className="text-emerald-400">●</span>}
+            {getLabel('createListing', user.language)}
+          </button>
+          <button 
+            onClick={() => setActiveTab('my-listings')}
+            className={`px-8 py-3 rounded-full text-sm font-bold transition-all duration-300 z-10 flex items-center gap-2 ${
+              activeTab === 'my-listings' 
+                ? 'bg-slate-900 text-white shadow-md' 
+                : 'text-slate-500 hover:text-slate-700'
+            }`}
+          >
+            {getLabel('myListings', user.language)}
+            {myListings.length > 0 && (
+              <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${activeTab === 'my-listings' ? 'bg-emerald-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                {myListings.length}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {activeTab === 'create' && (
+        <div className="space-y-10 animate-fade-in-up">
+          {/* Hero Card - Solid Deep Emerald */}
+          <div className="bg-[#064e3b] p-12 rounded-[48px] shadow-2xl shadow-emerald-900/20 text-center relative overflow-hidden group">
+             {/* Subtle pattern or slight variation */}
+             <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2"></div>
+
+            <h3 className="text-4xl font-black mb-4 relative z-10 tracking-tight text-white">{getLabel('sellInSeconds', user.language)}</h3>
+            <p className="text-emerald-100 mb-10 relative z-10 max-w-lg mx-auto text-lg font-medium leading-relaxed">
+              {getLabel('tapMic', user.language)} <br/><span className="text-white font-bold bg-white/10 px-3 py-1 rounded-xl inline-block mt-3 border border-white/20">{getLabel('voiceExample', user.language)}</span>
+            </p>
+            
+            <div className="flex justify-center relative z-10">
+               <div className="bg-white/10 p-4 rounded-full backdrop-blur-sm border border-white/20 group-hover:scale-105 transition-transform duration-300">
+                  <VoiceIndicator state={voiceState} onClick={handleVoiceInput} />
+               </div>
+            </div>
+            
+            {voiceState.isListening && <p className="mt-8 text-white font-bold animate-pulse tracking-widest text-xs uppercase bg-black/20 inline-block px-4 py-1 rounded-full">{getLabel('listening', user.language)}</p>}
+          </div>
+
+          <div className="flex items-center gap-6 text-slate-400 text-xs font-bold tracking-widest uppercase">
+             <div className="h-px bg-slate-200 flex-1"></div>
+             <span>{getLabel('orType', user.language)}</span>
+             <div className="h-px bg-slate-200 flex-1"></div>
+          </div>
+
+          {/* Modern Input Area */}
+          <div className="relative group">
+             <div className="bg-white rounded-[32px] border-2 border-slate-100 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-50 transition-all shadow-sm hover:shadow-md">
+               <textarea 
+                 value={listingText}
+                 onChange={(e) => setListingText(e.target.value)}
+                 placeholder={getLabel('placeholderListing', user.language)}
+                 rows={3}
+                 className="w-full p-8 bg-transparent border-none outline-none focus:ring-0 resize-none text-2xl text-slate-900 placeholder-slate-300 font-medium rounded-[32px]"
+               />
+             </div>
+             <button 
+               onClick={() => handleExtract(listingText)}
+               disabled={!listingText || isExtracting}
+               className="absolute bottom-6 right-6 bg-slate-900 text-white p-4 rounded-2xl hover:bg-black transition-all disabled:opacity-50 shadow-lg active:scale-95"
+             >
+               {isExtracting ? (
+                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+               ) : (
+                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+               )}
+             </button>
+          </div>
+
+          {/* Review Card */}
+          {extractedData && (
+            <div className="bg-white rounded-[40px] shadow-xl shadow-slate-200 border border-slate-100 overflow-hidden animate-fade-in-up">
+              <div className="bg-slate-50 p-8 border-b border-slate-100">
+                <h3 className="font-black text-slate-900 text-2xl">{getLabel('confirmListing', user.language)}</h3>
+              </div>
+              <div className="p-8 sm:p-12">
+                <div className="grid grid-cols-2 gap-12 mb-12">
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 block">{getLabel('produce', user.language)}</label>
+                    <p className="font-black text-4xl text-slate-900 tracking-tight">{extractedData.produceName}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 block">{getLabel('askingPrice', user.language)}</label>
+                    <p className="font-black text-4xl text-emerald-600 tracking-tight">₹{extractedData.pricePerUnit}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 block">{getLabel('quantity', user.language)}</label>
+                    <p className="font-bold text-2xl text-slate-700">{extractedData.quantity} {extractedData.unit}</p>
+                  </div>
+                  <div>
+                    <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 block">{getLabel('quality', user.language)}</label>
+                    <div className="inline-block bg-orange-50 text-orange-700 text-sm font-bold px-5 py-2 rounded-full mt-1 border border-orange-100">
+                      {extractedData.quality}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-12">
+                  <label className="block text-sm font-bold text-slate-900 mb-4">{getLabel('addPhotos', user.language)}</label>
+                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                    {uploadedImages.map((url, idx) => (
+                      <div key={idx} className="relative w-36 h-36 shrink-0 rounded-[24px] overflow-hidden shadow-lg group">
+                         <img src={url} alt="produce" className="w-full h-full object-cover" />
+                         <button 
+                           onClick={() => handleRemoveImage(idx)} 
+                           className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm"
+                         >
+                           <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                         </button>
+                      </div>
+                    ))}
+                    <label className="w-36 h-36 shrink-0 bg-slate-50 border-2 border-dashed border-slate-200 rounded-[24px] flex flex-col items-center justify-center text-slate-400 cursor-pointer hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all group">
+                        {isUploading ? (
+                          <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                        ) : (
+                          <svg className="w-10 h-10 group-hover:scale-110 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" /></svg>
+                        )}
+                        <input type="file" accept="image/*" onChange={handleImageSelect} disabled={isUploading} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+
+                <div className="flex gap-6">
+                  <button 
+                    onClick={() => { setExtractedData(null); setUploadedImages([]); }}
+                    className="flex-1 py-5 text-slate-600 font-bold border-2 border-slate-200 rounded-full hover:bg-slate-50 transition-colors"
+                  >
+                    {getLabel('discard', user.language)}
+                  </button>
+                  <button 
+                    onClick={handleCreate}
+                    className="flex-1 py-5 bg-emerald-600 text-white font-bold rounded-full shadow-lg hover:bg-emerald-700 transition-all active:scale-[0.98]"
+                  >
+                    {getLabel('publishListing', user.language)}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Live Market Rates Section */}
+      <LiveMarketTicker language={user.language} />
+
+      {activeNegotiationListing && (
+        <NegotiationView 
+          listing={activeNegotiationListing}
+          userLanguage={user.language}
+          userRole={UserRole.SELLER}
+          onClose={() => setActiveNegotiationListing(null)}
+        />
+      )}
+    </div>
+  );
+};
