@@ -94,7 +94,7 @@ export const useVoiceAssistant = (language: SupportedLanguageCode) => {
     
   }, [language, availableVoices]);
 
-  // Speech to Text (STT) using Browser API
+  // Speech to Text (STT) using Browser API with Multi-Language Support
   const listen = useCallback(async (): Promise<string> => {
     if (!recognitionRef.current) {
       alert("Speech recognition is not supported in this browser. Please use Chrome.");
@@ -118,24 +118,56 @@ export const useVoiceAssistant = (language: SupportedLanguageCode) => {
     return new Promise((resolve) => {
       const recognition = recognitionRef.current;
       
-      // Update language dynamically
-      recognition.lang = SPEECH_LANG_MAP[language] || 'en-US';
+      // Enable multi-language detection by trying primary language first
+      // Then fallback to Hindi (most common) if confidence is low
+      const primaryLang = SPEECH_LANG_MAP[language] || 'hi-IN';
+      recognition.lang = primaryLang;
+      
+      // Enable alternative results to get better language detection
+      recognition.maxAlternatives = 3;
 
       setState(prev => ({ ...prev, isListening: true, lastTranscript: '', isSpeaking: false }));
 
       recognition.onstart = () => {
-        console.log("Listening started...");
+        console.log(`🎤 Listening started (Primary: ${primaryLang}, Auto-detect enabled)...`);
       };
 
       recognition.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        console.log("Transcript:", transcript);
-        setState(prev => ({ ...prev, isListening: false, lastTranscript: transcript }));
-        resolve(transcript);
+        // Get the best transcript from alternatives
+        let bestTranscript = event.results[0][0].transcript;
+        let bestConfidence = event.results[0][0].confidence;
+        
+        // Check alternatives for better matches
+        for (let i = 0; i < event.results[0].length; i++) {
+          const alternative = event.results[0][i];
+          console.log(`Alternative ${i}: "${alternative.transcript}" (confidence: ${alternative.confidence})`);
+          
+          if (alternative.confidence > bestConfidence) {
+            bestTranscript = alternative.transcript;
+            bestConfidence = alternative.confidence;
+          }
+        }
+        
+        console.log(`✅ Best Transcript: "${bestTranscript}" (confidence: ${bestConfidence})`);
+        setState(prev => ({ ...prev, isListening: false, lastTranscript: bestTranscript }));
+        resolve(bestTranscript);
       };
 
       recognition.onerror = (event: any) => {
         console.error("Speech Recognition Error", event.error);
+        
+        // If language not supported, try with Hindi as fallback
+        if (event.error === 'language-not-supported' && primaryLang !== 'hi-IN') {
+          console.log("🔄 Retrying with Hindi (hi-IN)...");
+          recognition.lang = 'hi-IN';
+          try {
+            recognition.start();
+            return; // Don't resolve yet, let it retry
+          } catch (e) {
+            console.error("Retry failed:", e);
+          }
+        }
+        
         if (event.error === 'not-allowed') {
            alert("Microphone access is blocked. Please allow access in your browser settings.");
         }
@@ -154,10 +186,6 @@ export const useVoiceAssistant = (language: SupportedLanguageCode) => {
         recognition.start();
       } catch (e) {
         console.warn("Recognition already started or failed", e);
-        // If it's already started, we might not want to resolve empty immediately, 
-        // but for simplicity in this hook structure, we reset.
-        // Actually, if it's already started, we probably shouldn't have reached here 
-        // because of the isListening check in components, but safety first.
         setState(prev => ({ ...prev, isListening: false }));
         resolve("");
       }

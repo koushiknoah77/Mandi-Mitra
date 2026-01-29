@@ -17,6 +17,7 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
   const [listingText, setListingText] = useState("");
   const [extractedData, setExtractedData] = useState<ListingData | null>(null);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [extractionError, setExtractionError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'my-listings'>('create');
   
   const [myListings, setMyListings] = useState<Listing[]>([]);
@@ -24,16 +25,25 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [activeNegotiationListing, setActiveNegotiationListing] = useState<Listing | null>(null);
 
-  const { state: voiceState, speak, listen, cancel } = useVoiceAssistant(user.language);
+  const { state: voiceState, listen, cancel } = useVoiceAssistant(user.language);
 
   const handleExtract = async (text: string) => {
+    if (!text.trim()) {
+      setExtractionError(getLabel('emptyInput', user.language));
+      return;
+    }
+    
     setIsExtracting(true);
+    setExtractionError(null);
+    
     try {
       const data = await geminiService.extractListingData(text);
       setExtractedData(data);
+      setExtractionError(null);
       analyticsService.logEvent('listing_extract_success', user.id);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
+      setExtractionError(e.message || getLabel('extractionFailed', user.language));
       analyticsService.logEvent('listing_extract_fail', user.id);
     } finally {
       setIsExtracting(false);
@@ -166,7 +176,10 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
              <div className="bg-white rounded-[32px] border-2 border-slate-100 focus-within:border-emerald-500 focus-within:ring-4 focus-within:ring-emerald-50 transition-all shadow-sm hover:shadow-md">
                <textarea 
                  value={listingText}
-                 onChange={(e) => setListingText(e.target.value)}
+                 onChange={(e) => {
+                   setListingText(e.target.value);
+                   setExtractionError(null);
+                 }}
                  placeholder={getLabel('placeholderListing', user.language)}
                  rows={3}
                  className="w-full p-8 bg-transparent border-none outline-none focus:ring-0 resize-none text-2xl text-slate-900 placeholder-slate-300 font-medium rounded-[32px]"
@@ -185,6 +198,24 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
              </button>
           </div>
 
+          {/* Error Message */}
+          {extractionError && (
+            <div className="bg-red-50 border-2 border-red-200 rounded-[24px] p-6 animate-fade-in-up">
+              <div className="flex items-start gap-4">
+                <div className="bg-red-100 p-2 rounded-full shrink-0">
+                  <svg className="w-5 h-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-red-900 mb-1">{getLabel('extractionError', user.language)}</h4>
+                  <p className="text-red-700 text-sm">{extractionError}</p>
+                  <p className="text-red-600 text-xs mt-2 font-medium">{getLabel('exampleFormat', user.language)}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Review Card */}
           {extractedData && (
             <div className="bg-white rounded-[40px] shadow-xl shadow-slate-200 border border-slate-100 overflow-hidden animate-fade-in-up">
@@ -192,23 +223,23 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
                 <h3 className="font-black text-slate-900 text-2xl">{getLabel('confirmListing', user.language)}</h3>
               </div>
               <div className="p-8 sm:p-12">
-                <div className="grid grid-cols-2 gap-12 mb-12">
-                  <div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 sm:gap-12 mb-12">
+                  <div className="space-y-2">
                     <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 block">{getLabel('produce', user.language)}</label>
-                    <p className="font-black text-4xl text-slate-900 tracking-tight">{extractedData.produceName}</p>
+                    <p className="font-black text-3xl sm:text-4xl text-slate-900 tracking-tight break-words">{extractedData.produceName}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 block">{getLabel('askingPrice', user.language)}</label>
-                    <p className="font-black text-4xl text-emerald-600 tracking-tight">₹{extractedData.pricePerUnit}</p>
+                    <p className="font-black text-3xl sm:text-4xl text-emerald-600 tracking-tight">₹{extractedData.pricePerUnit}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 block">{getLabel('quantity', user.language)}</label>
-                    <p className="font-bold text-2xl text-slate-700">{extractedData.quantity} {extractedData.unit}</p>
+                    <p className="font-bold text-xl sm:text-2xl text-slate-700">{extractedData.quantity} {extractedData.unit}</p>
                   </div>
-                  <div>
+                  <div className="space-y-2">
                     <label className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-2 block">{getLabel('quality', user.language)}</label>
                     <div className="inline-block bg-orange-50 text-orange-700 text-sm font-bold px-5 py-2 rounded-full mt-1 border border-orange-100">
-                      {extractedData.quality}
+                      {extractedData.quality || getLabel('standard', user.language)}
                     </div>
                   </div>
                 </div>
@@ -253,6 +284,98 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
                   </button>
                 </div>
               </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* My Listings Tab */}
+      {activeTab === 'my-listings' && (
+        <div className="space-y-6 animate-fade-in-up">
+          {myListings.length === 0 ? (
+            <div className="bg-white rounded-[40px] p-16 text-center shadow-lg">
+              <div className="w-24 h-24 bg-slate-100 rounded-full mx-auto mb-6 flex items-center justify-center">
+                <svg className="w-12 h-12 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                </svg>
+              </div>
+              <h3 className="text-2xl font-black text-slate-900 mb-3">{getLabel('noListings', user.language)}</h3>
+              <p className="text-slate-500 mb-8">{getLabel('createFirstListing', user.language)}</p>
+              <button 
+                onClick={() => setActiveTab('create')}
+                className="px-8 py-4 bg-emerald-600 text-white font-bold rounded-full hover:bg-emerald-700 transition-all shadow-lg"
+              >
+                {getLabel('createListing', user.language)}
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6">
+              {myListings.map((listing) => (
+                <div key={listing.id} className="bg-white rounded-[32px] shadow-lg border border-slate-100 overflow-hidden hover:shadow-xl transition-shadow">
+                  <div className="flex flex-col sm:flex-row">
+                    {/* Image Section */}
+                    {listing.images && listing.images.length > 0 ? (
+                      <div className="sm:w-48 h-48 sm:h-auto shrink-0">
+                        <img 
+                          src={listing.images[0]} 
+                          alt={listing.produceName}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <div className="sm:w-48 h-48 sm:h-auto shrink-0 bg-slate-100 flex items-center justify-center">
+                        <svg className="w-16 h-16 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </div>
+                    )}
+                    
+                    {/* Content Section */}
+                    <div className="flex-1 p-6 sm:p-8">
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h3 className="text-2xl font-black text-slate-900 mb-1">{listing.produceName}</h3>
+                          <p className="text-sm text-slate-500">{listing.location}</p>
+                        </div>
+                        <div className="bg-orange-50 text-orange-700 text-xs font-bold px-3 py-1 rounded-full border border-orange-100">
+                          {listing.quality}
+                        </div>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div>
+                          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">{getLabel('quantity', user.language)}</p>
+                          <p className="text-lg font-bold text-slate-700">{listing.quantity} {listing.unit}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">{getLabel('price', user.language)}</p>
+                          <p className="text-lg font-bold text-emerald-600">₹{listing.pricePerUnit}/{listing.unit}</p>
+                        </div>
+                      </div>
+                      
+                      {listing.description && (
+                        <p className="text-sm text-slate-600 mb-4">{listing.description}</p>
+                      )}
+                      
+                      <div className="flex gap-3">
+                        <button 
+                          onClick={() => setActiveNegotiationListing(listing)}
+                          className="flex-1 py-3 bg-slate-900 text-white font-bold rounded-full hover:bg-black transition-all"
+                        >
+                          {getLabel('viewOffers', user.language)}
+                        </button>
+                        <button 
+                          className="px-6 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-full hover:bg-slate-50 transition-all"
+                        >
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

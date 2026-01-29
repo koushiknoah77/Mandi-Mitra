@@ -36,17 +36,21 @@ class GeminiService {
 
   async extractUserProfile(text: string): Promise<ExtractedUserProfile> {
     try {
+      const schema = {
+        type: "object",
+        properties: {
+          name: { type: "string", description: "User's name" },
+          state: { type: "string", description: "User's state in English" },
+          detectedLanguage: { type: "string", description: "Detected language code" }
+        }
+      };
+
       const response = await this.ai.models.generateContent({
         model: this.MODEL,
-        contents: `Extract the user's Name and State from the following voice transcript.
-        The input might be in English, Hindi, or any Indian language.
-        Translate the State name to English if it is in native script (e.g. 'महाराष्ट्र' -> 'Maharashtra').
-        
-        Input: "${text}"
-        
-        Respond in JSON format with keys: name, state, detectedLanguage`,
+        contents: `Extract the user's Name and State from: "${text}". Translate state to English if needed.`,
         config: {
           responseMimeType: "application/json",
+          responseJsonSchema: schema,
         },
       });
 
@@ -61,29 +65,110 @@ class GeminiService {
 
   async extractListingData(text: string): Promise<ListingData> {
     try {
+      const schema = {
+        type: "object",
+        properties: {
+          produceName: { 
+            type: "string", 
+            description: "Produce name in English (e.g., Rice, Wheat, Onion, Tomato)" 
+          },
+          quantity: { 
+            type: "number", 
+            description: "Numeric quantity amount (e.g., 50, 100)" 
+          },
+          unit: { 
+            type: "string", 
+            description: "Unit of measurement (quintal, kg, ton, bag)" 
+          },
+          pricePerUnit: { 
+            type: "number", 
+            description: "Price per unit in rupees (numeric only)" 
+          },
+          currency: { 
+            type: "string", 
+            description: "Currency code (default: INR)" 
+          },
+          quality: { 
+            type: "string", 
+            description: "Quality grade (Premium, Grade A, Standard, etc.)" 
+          },
+          description: { 
+            type: "string", 
+            description: "Additional details about the produce" 
+          },
+          detectedLanguage: {
+            type: "string",
+            description: "Detected language of the input text (hi, bn, te, mr, ta, gu, etc.)"
+          }
+        },
+        required: ["produceName", "quantity", "unit", "pricePerUnit"]
+      };
+
+      const prompt = `Extract agricultural listing details from this text in ANY INDIAN LANGUAGE: "${text}"
+
+CRITICAL INSTRUCTIONS:
+1. AUTOMATICALLY DETECT the language (Hindi, Bengali, Telugu, Tamil, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese, Urdu, English, or any other Indian language)
+2. Translate produce name to English (e.g., "চাল" → "Rice", "प्याज" → "Onion", "వరి" → "Rice", "தக்காளி" → "Tomato")
+3. Extract numeric quantity from ANY script (Devanagari, Bengali, Telugu, Tamil, etc.)
+4. Identify unit in any language (quintal/क्विंटल/কুইন্টাল, kg/किलो/কেজি, ton/टन/টন, bag/बोरी/বস্তা, etc.)
+5. Extract price per unit as a number from any script (e.g., "100" from "₹100" or "১০০ টাকা" or "100 रुपये")
+6. Set currency to "INR" if not specified
+7. Infer quality if mentioned in any language
+8. Detect and return the language code (hi, bn, te, ta, mr, gu, kn, ml, pa, or, as, ur, en)
+
+MULTI-LANGUAGE EXAMPLES:
+- Hindi: "50 क्विंटल चावल 3000 रुपये" → produceName: "Rice", quantity: 50, unit: "quintal", pricePerUnit: 3000, detectedLanguage: "hi"
+- Bengali: "৫০ কুইন্টাল চাল ৩০০০ টাকা" → produceName: "Rice", quantity: 50, unit: "quintal", pricePerUnit: 3000, detectedLanguage: "bn"
+- Telugu: "50 క్వింటాల్ బియ్యం 3000 రూపాయలు" → produceName: "Rice", quantity: 50, unit: "quintal", pricePerUnit: 3000, detectedLanguage: "te"
+- Tamil: "50 குவிண்டால் அரிசி 3000 ரூபாய்" → produceName: "Rice", quantity: 50, unit: "quintal", pricePerUnit: 3000, detectedLanguage: "ta"
+- Marathi: "50 क्विंटल तांदूळ 3000 रुपये" → produceName: "Rice", quantity: 50, unit: "quintal", pricePerUnit: 3000, detectedLanguage: "mr"
+- Gujarati: "50 ક્વિન્ટલ ચોખા 3000 રૂપિયા" → produceName: "Rice", quantity: 50, unit: "quintal", pricePerUnit: 3000, detectedLanguage: "gu"
+- English: "50 quintal rice for 3000" → produceName: "Rice", quantity: 50, unit: "quintal", pricePerUnit: 3000, detectedLanguage: "en"
+
+YOU MUST handle ANY Indian language automatically without being told which language it is!`;
+
+      console.log("🤖 Extracting listing data with auto-language detection from:", text);
+
       const response = await this.ai.models.generateContent({
         model: this.MODEL,
-        contents: `Extract agricultural listing details from the following text. 
-        The text may be in English or any Indian language.
-        Focus on produce name, quantity, unit, and price. 
-        Infer quality if mentioned. 
-        Default currency to INR if not specified.
-        Translate produce name to English for standardization (e.g. 'Pyaaz' -> 'Onion').
-        
-        Text: "${text}"
-        
-        Respond in JSON format with keys: produceName, quantity, unit, pricePerUnit, currency, quality, description`,
+        contents: prompt,
         config: {
           responseMimeType: "application/json",
+          responseJsonSchema: schema,
+          temperature: 0.3, // Lower temperature for more consistent extraction
         },
       });
 
       const result = response.text;
-      if (!result) throw new Error("Empty response from Gemini");
-      return JSON.parse(result) as ListingData;
+      if (!result) {
+        console.error("❌ Empty response from Gemini");
+        throw new Error("Empty response from Gemini");
+      }
+
+      console.log("📝 Raw extraction result:", result);
+
+      const parsed = JSON.parse(result) as ListingData & { detectedLanguage?: string };
+      
+      // Log detected language
+      if (parsed.detectedLanguage) {
+        console.log(`🌐 Detected language: ${parsed.detectedLanguage}`);
+      }
+      
+      // Validate and set defaults
+      if (!parsed.currency) parsed.currency = "INR";
+      if (!parsed.quality) parsed.quality = "Standard";
+      if (!parsed.description) parsed.description = "";
+      
+      // Ensure numeric values
+      parsed.quantity = Number(parsed.quantity);
+      parsed.pricePerUnit = Number(parsed.pricePerUnit);
+      
+      console.log("✅ Extracted listing data:", parsed);
+      
+      return parsed;
     } catch (error) {
-      console.error("Gemini Extraction Error:", error);
-      throw new Error("Failed to extract listing data. Please try again.");
+      console.error("❌ Gemini Extraction Error:", error);
+      throw new Error("Failed to extract listing data. Please try again with clear details in any Indian language!");
     }
   }
 
@@ -95,41 +180,19 @@ class GeminiService {
     language: SupportedLanguageCode
   ): Promise<NegotiationResponse> {
     const aiRole = userRole === UserRole.BUYER ? 'Seller' : 'Buyer';
-    const humanRole = userRole === UserRole.BUYER ? 'Buyer' : 'Seller';
     const languageName = SUPPORTED_LANGUAGES[language]?.name || "English";
-    const languageCode = SUPPORTED_LANGUAGES[language]?.code || "en";
 
     try {
       // Get the last user message
       const lastUserMessage = history.filter(m => m.senderId !== 'system').slice(-1)[0];
       const userMessage = lastUserMessage?.text || "Hello";
 
-      const prompt = `You are a ${aiRole} in a negotiation for ${listing.produceName}.
+      // Simplified approach: Just get a text response, no JSON
+      const prompt = `You are a ${aiRole} negotiating for ${listing.produceName}.
+Price: ₹${listing.pricePerUnit}/${listing.unit}
+User said: "${userMessage}"
 
-PRODUCT DETAILS:
-- Item: ${listing.produceName}
-- Listed Price: ₹${listing.pricePerUnit} per ${listing.unit}
-- Quantity Available: ${listing.quantity} ${listing.unit}
-- Location: ${listing.location}
-
-YOUR ROLE: ${aiRole === 'Seller' ? 'You are selling this product. Your minimum price is ₹' + Math.round(listing.pricePerUnit * 0.85) : 'You want to buy this product. Your maximum price is ₹' + Math.round(listing.pricePerUnit * 1.15)}.
-
-USER SAID: "${userMessage}"
-
-INSTRUCTIONS:
-1. Respond in ${languageName} language
-2. When asked about price, ALWAYS state: "₹${listing.pricePerUnit} per ${listing.unit}"
-3. Be specific with numbers - NO vague responses
-4. Keep response under 25 words
-5. If user says "deal" or "yes", set status to "agreed"
-
-RESPOND IN JSON:
-{
-  "text": "your ${languageName} response with specific price",
-  "status": "ongoing",
-  "proposedPrice": ${lastOffer.price},
-  "proposedQuantity": ${lastOffer.quantity}
-}`;
+Respond in ${languageName} in under 20 words. Mention the price clearly.`;
 
       console.log("🤖 Negotiation request to Gemini...");
       console.log("📝 User message:", userMessage);
@@ -138,9 +201,8 @@ RESPOND IN JSON:
         model: this.MODEL,
         contents: prompt,
         config: {
-          responseMimeType: "application/json",
           temperature: 0.7,
-          maxOutputTokens: 200,
+          maxOutputTokens: 150,
         },
       });
 
@@ -149,33 +211,28 @@ RESPOND IN JSON:
       const result = response.text;
       if (!result) {
         console.error("❌ Empty response from Gemini");
-        throw new Error("Empty response from Gemini");
-      }
-      
-      console.log("📝 Raw response:", result);
-      
-      let parsed;
-      try {
-        parsed = JSON.parse(result);
-      } catch (parseError) {
-        console.error("❌ JSON parse error:", parseError);
-        console.error("Raw text was:", result);
-        // Fallback: use the text directly
         return {
-          text: result || `The price is ₹${listing.pricePerUnit} per ${listing.unit}. Interested?`,
+          text: `The price is ₹${listing.pricePerUnit} per ${listing.unit}. What would you like to offer?`,
           status: 'ongoing',
-          proposedPrice: lastOffer.price,
-          proposedQuantity: lastOffer.quantity
+          proposedPrice: listing.pricePerUnit,
+          proposedQuantity: listing.quantity
         };
       }
       
-      console.log("✅ Parsed response:", parsed);
+      console.log("📝 AI Response:", result);
+      
+      // Simple text response - no JSON parsing needed
+      // Check if user agreed to deal
+      const agreedKeywords = ['deal', 'yes', 'okay', 'agreed', 'accept', 'done', 'হাঁ', 'ঠিক আছে', 'हाँ', 'ठीक है'];
+      const isAgreed = agreedKeywords.some(keyword => 
+        userMessage.toLowerCase().includes(keyword)
+      );
       
       return {
-        text: parsed.text || `The price is ₹${listing.pricePerUnit} per ${listing.unit}. Interested?`,
-        status: parsed.status || 'ongoing',
-        proposedPrice: parsed.proposedPrice || lastOffer.price,
-        proposedQuantity: parsed.proposedQuantity || lastOffer.quantity
+        text: result.trim(),
+        status: isAgreed ? 'agreed' : 'ongoing',
+        proposedPrice: lastOffer.price,
+        proposedQuantity: lastOffer.quantity
       };
 
     } catch (error) {
@@ -205,15 +262,22 @@ RESPOND IN JSON:
     }
 
     try {
+      const schema = {
+        type: "object",
+        properties: {
+          flagged: { type: "boolean", description: "Whether content is inappropriate" },
+          reason: { type: "string", description: "Reason for flagging" },
+          advisory: { type: "string", description: "Advisory message" }
+        },
+        required: ["flagged"]
+      };
+
       const response = await this.ai.models.generateContent({
         model: this.MODEL,
-        contents: `Analyze the following message for inappropriate content (toxicity, hate speech) or scam risks in an agricultural trade context.
-        
-Message: "${message}"
-
-Respond in JSON format with keys: flagged (boolean), reason (inappropriate/scam_risk/null), advisory (string or null)`,
+        contents: `Analyze for inappropriate content or scam risks: "${message}"`,
         config: {
           responseMimeType: "application/json",
+          responseJsonSchema: schema,
         },
       });
 

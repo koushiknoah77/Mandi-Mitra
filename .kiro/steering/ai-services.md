@@ -9,16 +9,36 @@ fileMatchPattern: "services/**/*"
 **File**: `services/geminiService.ts`
 
 ### Capabilities
-- Listing data extraction from voice/text
-- Negotiation intent detection
-- Content moderation
-- Price deviation analysis
-- Support chatbot responses
+- **Listing data extraction**: Extracts structured data from natural language in ANY Indian language
+- **Automatic language detection**: Detects which language was spoken (hi, bn, te, ta, mr, gu, etc.)
+- **Multi-script support**: Handles Devanagari, Bengali, Telugu, Tamil, Gujarati, and other scripts
+- **Negotiation intent detection**: Analyzes negotiation messages for intent
+- **Content moderation**: Flags inappropriate content and price deviations
+- **Price deviation analysis**: Compares prices against market rates
+- **Support chatbot**: Multilingual AI customer support responses
+
+### Latest Implementation: Multi-Language Extraction
+The Gemini service now automatically detects and processes ANY Indian language:
+
+```typescript
+// Extract listing from natural language in ANY language
+const listing = await geminiService.extractListingData(transcript);
+// Returns: { produceName, quantity, unit, pricePerUnit, detectedLanguage, ... }
+```
+
+**Key Features**:
+- Automatically detects language from text (no language parameter needed)
+- Translates produce names to English (e.g., "চাল" → "Rice", "प्याज" → "Onion")
+- Extracts numbers from any script (Devanagari, Bengali, Telugu, Tamil, etc.)
+- Handles units in any language (quintal/क्विंटल/কুইন্টাল, kg/किलो/কেজি)
+- Returns detected language code for tracking
+
+**Supported Languages**: Hindi, Bengali, Telugu, Tamil, Marathi, Gujarati, Kannada, Malayalam, Punjabi, Odia, Assamese, Urdu, English, and 10+ more
 
 ### Usage Patterns
 ```typescript
-// Extract listing from natural language
-const listing = await geminiService.extractListingData(transcript, language);
+// Extract listing from natural language (auto-detects language)
+const listing = await geminiService.extractListingData(transcript);
 
 // Detect negotiation intent
 const intent = await geminiService.detectNegotiationIntent(message, context);
@@ -26,7 +46,7 @@ const intent = await geminiService.detectNegotiationIntent(message, context);
 // Moderate content
 const moderation = await geminiService.moderateContent(message, marketPrice);
 
-// Support chat
+// Support chat in specific language
 const response = await geminiService.getSupportResponse(query, language);
 ```
 
@@ -35,6 +55,7 @@ const response = await geminiService.getSupportResponse(query, language);
 - Provide fallback responses for failures
 - Log errors with context for debugging
 - Handle rate limiting gracefully
+- Show user-friendly error messages in their language
 
 ## Speech Services
 **File**: `services/bhashiniService.ts`
@@ -46,16 +67,18 @@ const response = await geminiService.getSupportResponse(query, language);
 - Works offline for speech recognition
 
 ### Capabilities
-- Speech-to-text (23 Indian languages via browser)
-- Text-to-speech synthesis (browser voices)
-- Real-time voice recognition
-- Language-specific voice selection
+- **Speech-to-text**: 23 Indian languages via browser
+- **Text-to-speech synthesis**: Browser voices in multiple languages
+- **Real-time voice recognition**: Instant transcription
+- **Language-specific voice selection**: Automatically selects best voice
+- **Multi-alternative transcription**: Gets multiple options with confidence scores
 
 ### Usage Patterns
 ```typescript
 // Browser speech recognition is handled in useVoiceAssistant hook
 // Text-to-speech uses browser's SpeechSynthesis API
 // No mock implementations - uses real browser APIs
+```
 
 ### Real AI Only
 - No mock services - all AI features use real Gemini API
