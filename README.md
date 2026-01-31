@@ -338,7 +338,6 @@ This project is licensed under the MIT License.
 
 ## 🔗 Links
 
-- **AI Studio App**: https://ai.studio/apps/drive/1rNnklQug-dP7FRx_Ki9TBtx1np1MSvt0
 - **Google Gemini API**: https://ai.google.dev/gemini-api/docs
 - **Get API Key**: https://aistudio.google.com/app/apikey
 
