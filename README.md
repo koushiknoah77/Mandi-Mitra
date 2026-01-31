@@ -247,14 +247,13 @@ npm run lint     # Run ESLint
 
 ## 📝 Recent Updates
 
-### Latest Features (January 31, 2026)
+
 - ✅ **Delete Listings** - Sellers can remove their own listings with confirmation
 - ✅ **Back Navigation** - Back buttons in all chat and negotiation views
 - ✅ **Bengali Numeral Support** - Extract Bengali (৩০০০) and Devanagari (०१२) numerals
 - ✅ **Fallback Systems** - Chat and deal completion work without AI
+- ✅ **Role-Aware Negotiation Logic** - Improved seller/buyer interaction flows
 - ✅ **Enhanced Error Handling** - Better error messages in user's language
-
-### Previous Updates (January 2026)
 - ✅ **Rating System** - Rate users after deals (1-5 stars with reviews)
 - ✅ **Favorites/Bookmarks** - Save and filter favorite listings
 - ✅ **Share Listings** - Share via WhatsApp, SMS, or native share
@@ -315,14 +314,6 @@ npm run lint     # Run ESLint
 14. Bengali Numerals
 15. Fallback Systems
 
-**❌ Not Implemented (7 features - require backend)**
-1. Push Notifications
-2. Multi-device Sync
-3. Phone OTP Authentication
-4. Cloud Image Upload
-5. Payment Gateway
-6. Real-time Chat (WebSocket)
-7. Email Notifications
 
 ---
 
@@ -346,7 +337,6 @@ This project is licensed under the MIT License.
 
 ## 🔗 Links
 
-- **AI Studio App**: https://ai.studio/apps/drive/1rNnklQug-dP7FRx_Ki9TBtx1np1MSvt0
 - **Google Gemini API**: https://ai.google.dev/gemini-api/docs
 - **Get API Key**: https://aistudio.google.com/app/apikey
 

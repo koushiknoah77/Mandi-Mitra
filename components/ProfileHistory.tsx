@@ -9,9 +9,9 @@ interface ProfileHistoryProps {
   onClose: () => void;
 }
 
-export const ProfileHistory: React.FC<ProfileHistoryProps> = ({ 
+export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
   user,
-  onClose 
+  onClose
 }) => {
   const { transactions, conversations } = useListings();
   const [activeTab, setActiveTab] = useState<'transactions' | 'conversations'>('transactions');
@@ -31,7 +31,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
     <>
       <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
         <div className="bg-white w-full max-w-4xl max-h-[90vh] rounded-[32px] shadow-2xl flex flex-col overflow-hidden">
-          
+
           {/* Header */}
           <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 p-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -43,7 +43,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                 <p className="text-emerald-100 text-sm font-medium">{user.phoneNumber} • {user.state}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={onClose}
               className="w-10 h-10 flex items-center justify-center bg-white/20 hover:bg-white/30 rounded-full text-white transition-colors"
             >
@@ -57,11 +57,10 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
           <div className="flex border-b border-slate-200 bg-slate-50">
             <button
               onClick={() => setActiveTab('transactions')}
-              className={`flex-1 py-4 px-6 font-bold text-sm transition-all relative ${
-                activeTab === 'transactions'
+              className={`flex-1 py-4 px-6 font-bold text-sm transition-all relative ${activeTab === 'transactions'
                   ? 'text-emerald-600'
                   : 'text-slate-500 hover:text-slate-700'
-              }`}
+                }`}
             >
               {getLabel('transactionHistory', user.language)}
               {transactions.length > 0 && (
@@ -75,11 +74,10 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
             </button>
             <button
               onClick={() => setActiveTab('conversations')}
-              className={`flex-1 py-4 px-6 font-bold text-sm transition-all relative ${
-                activeTab === 'conversations'
+              className={`flex-1 py-4 px-6 font-bold text-sm transition-all relative ${activeTab === 'conversations'
                   ? 'text-emerald-600'
                   : 'text-slate-500 hover:text-slate-700'
-              }`}
+                }`}
             >
               {getLabel('conversationHistory', user.language)}
               {conversations.length > 0 && (
@@ -106,16 +104,16 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                     </div>
                     <h3 className="text-xl font-black text-slate-900 mb-2">{getLabel('noTransactions', user.language)}</h3>
                     <p className="text-slate-500 text-sm">
-                      {user.role === UserRole.SELLER 
-                        ? getLabel('soldItems', user.language) 
+                      {user.role === UserRole.SELLER
+                        ? getLabel('soldItems', user.language)
                         : getLabel('purchasedItems', user.language)
                       } will appear here
                     </p>
                   </div>
                 ) : (
                   transactions.map((deal) => (
-                    <div 
-                      key={deal.id} 
+                    <div
+                      key={deal.id}
                       className="bg-white border border-slate-200 rounded-[24px] p-6 hover:shadow-lg transition-shadow"
                     >
                       <div className="flex items-start justify-between mb-4">
@@ -127,15 +125,14 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                             {formatDate(deal.timestamp)} • {formatTime(deal.timestamp)}
                           </p>
                         </div>
-                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${
-                          deal.status === 'completed' 
-                            ? 'bg-emerald-100 text-emerald-700' 
+                        <div className={`px-3 py-1 rounded-full text-xs font-bold ${deal.status === 'completed'
+                            ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-orange-100 text-orange-700'
-                        }`}>
+                          }`}>
                           {deal.status === 'completed' ? '✓ Completed' : 'Pending'}
                         </div>
                       </div>
-                      
+
                       <div className="grid grid-cols-3 gap-4 mb-4">
                         <div>
                           <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mb-1">
@@ -196,15 +193,15 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                   </div>
                 ) : (
                   conversations.map((conv) => (
-                    <div 
-                      key={conv.id} 
+                    <div
+                      key={conv.id}
                       className="bg-white border border-slate-200 rounded-[24px] p-6 hover:shadow-lg transition-shadow cursor-pointer"
                       onClick={() => setSelectedConversation(conv)}
                     >
                       <div className="flex items-start gap-4">
                         {conv.listing.images && conv.listing.images[0] ? (
-                          <img 
-                            src={conv.listing.images[0]} 
+                          <img
+                            src={conv.listing.images[0]}
                             alt={conv.listing.produceName}
                             className="w-16 h-16 rounded-2xl object-cover shrink-0"
                           />
@@ -215,7 +212,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                             </svg>
                           </div>
                         )}
-                        
+
                         <div className="flex-1 min-w-0">
                           <div className="flex items-start justify-between mb-2">
                             <div className="flex-1">
@@ -223,28 +220,27 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                                 {conv.listing.produceName}
                               </h3>
                               <p className="text-sm text-slate-600">
-                                {user.role === UserRole.SELLER 
-                                  ? conv.participants.buyerName 
+                                {user.role === UserRole.SELLER
+                                  ? conv.participants.buyerName
                                   : conv.participants.sellerName
                                 }
                               </p>
                             </div>
-                            <div className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ml-2 ${
-                              conv.dealStatus === 'completed' 
-                                ? 'bg-emerald-100 text-emerald-700' 
+                            <div className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ml-2 ${conv.dealStatus === 'completed'
+                                ? 'bg-emerald-100 text-emerald-700'
                                 : conv.dealStatus === 'cancelled'
-                                ? 'bg-slate-100 text-slate-600'
-                                : 'bg-orange-100 text-orange-700'
-                            }`}>
-                              {conv.dealStatus === 'completed' ? '✓ Closed' : 
-                               conv.dealStatus === 'cancelled' ? 'Cancelled' : 'Active'}
+                                  ? 'bg-slate-100 text-slate-600'
+                                  : 'bg-orange-100 text-orange-700'
+                              }`}>
+                              {conv.dealStatus === 'completed' ? '✓ Closed' :
+                                conv.dealStatus === 'cancelled' ? 'Cancelled' : 'Active'}
                             </div>
                           </div>
-                          
+
                           <p className="text-sm text-slate-500 mb-3 line-clamp-2">
                             {conv.messages[conv.messages.length - 1]?.text || 'No messages'}
                           </p>
-                          
+
                           <div className="flex items-center justify-between">
                             <p className="text-xs text-slate-400 font-medium">
                               {formatDate(conv.lastMessageAt)} • {formatTime(conv.lastMessageAt)}
@@ -271,6 +267,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
           userLanguage={user.language}
           userRole={user.role!}
           onClose={() => setSelectedConversation(null)}
+          existingConversation={selectedConversation}
         />
       )}
     </>

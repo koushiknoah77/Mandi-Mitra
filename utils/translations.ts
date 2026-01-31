@@ -468,3 +468,67 @@ export const getLabel = (key: string, lang: SupportedLanguageCode): string => {
   // 3. Fallback to English
   return entry['en'] || key;
 };
+
+
+// Deal finalization messages
+export const DEAL_FINALIZE_MESSAGES: Record<SupportedLanguageCode, string> = {
+  en: 'Excellent! Let me confirm the deal terms.',
+  hi: 'बढ़िया! मैं सौदे की शर्तें पक्की करता हूं।',
+  bn: 'দুর্দান্ত! আমি চুক্তির শর্তাবলী নিশ্চিত করছি।',
+  te: 'అద్భుతం! నేను డీల్ నిబంధనలను నిర్ధారిస్తాను।',
+  ta: 'அருமை! ஒப்பந்த விதிமுறைகளை உறுதிப்படுத்துகிறேன்.',
+  mr: 'उत्तम! मी करार अटी पुष्टी करतो.',
+  gu: 'ઉત્તમ! હું ડીલની શરતોની પુષ્ટિ કરું છું.',
+  kn: 'ಅದ್ಭುತ! ನಾನು ಡೀಲ್ ನಿಯಮಗಳನ್ನು ದೃಢೀಕರಿಸುತ್ತೇನೆ.',
+  ml: 'മികച്ചത്! ഞാൻ ഡീൽ നിബന്ധനകൾ സ്ഥിരീകരിക്കുന്നു.',
+  pa: 'ਸ਼ਾਨਦਾਰ! ਮੈਂ ਸੌਦੇ ਦੀਆਂ ਸ਼ਰਤਾਂ ਦੀ ਪੁਸ਼ਟੀ ਕਰਦਾ ਹਾਂ.',
+  ur: 'بہترین! میں ڈیل کی شرائط کی تصدیق کرتا ہوں۔',
+  or: 'ଉତ୍କୃଷ୍ଟ! ମୁଁ ଡିଲ୍ ସର୍ତ୍ତାବଳୀ ନିଶ୍ଚିତ କରୁଛି।',
+  as: 'উৎকৃষ্ট! মই চুক্তিৰ চৰ্তসমূহ নিশ্চিত কৰিছো।',
+  mai: 'उत्तम! हम सौदा के शर्त पक्का करैत छी।',
+  sa: 'उत्तमम्! अहं सौदायाः शर्तान् पुष्टीकरोमि।',
+  kok: 'उत्तम! हांव करारांच्या अटी पुष्टी करतां.',
+  mni: 'Excellent! Let me confirm the deal terms.',
+  ne: 'उत्कृष्ट! म सम्झौताका सर्तहरू पुष्टि गर्छु।',
+  brx: 'Excellent! Let me confirm the deal terms.',
+  doi: 'उत्तम! मैं सौदे दी शर्तां दी पुष्टि करदा हां।',
+  ks: 'بہترین! میں ڈیل کی شرائط کی تصدیق کرتا ہوں۔',
+  sat: 'Excellent! Let me confirm the deal terms.',
+  sd: 'بهترين! مان ڊيل جي شرطن جي تصديق ڪريان ٿو۔'
+};
+
+// Deal confirmation request messages
+export function getDealConfirmMessage(
+  quantity: number,
+  unit: string,
+  price: number,
+  language: SupportedLanguageCode
+): string {
+  const messages: Record<SupportedLanguageCode, string> = {
+    en: `Great! Do you want to buy ${quantity} ${unit} at ₹${price} per ${unit}? Please confirm.`,
+    hi: `बढ़िया! क्या आप ₹${price} प्रति ${unit} की कीमत पर ${quantity} ${unit} खरीदना चाहते हैं? कृपया पुष्टि करें।`,
+    bn: `দুর্দান্ত! আপনি কি ₹${price} প্রতি ${unit} দামে ${quantity} ${unit} কিনতে চান? অনুগ্রহ করে নিশ্চিত করুন।`,
+    te: `అద్భుతం! మీరు ₹${price} ప్రతి ${unit} ధరకు ${quantity} ${unit} కొనుగోలు చేయాలనుకుంటున్నారా? దయచేసి నిర్ధారించండి।`,
+    ta: `அருமை! நீங்கள் ₹${price} ஒன்றுக்கு ${unit} விலையில் ${quantity} ${unit} வாங்க விரும்புகிறீர்களா? தயவுசெய்து உறுதிப்படுத்தவும்.`,
+    mr: `छान! तुम्हाला ₹${price} प्रति ${unit} या किंमतीत ${quantity} ${unit} खरेदी करायचे आहे का? कृपया पुष्टी करा.`,
+    gu: `સરસ! શું તમે ₹${price} પ્રતિ ${unit} ના ભાવે ${quantity} ${unit} ખરીદવા માંગો છો? કૃપા કરીને પુષ્ટિ કરો.`,
+    kn: `ಅದ್ಭುತ! ನೀವು ₹${price} ಪ್ರತಿ ${unit} ದರದಲ್ಲಿ ${quantity} ${unit} ಖರೀದಿಸಲು ಬಯಸುತ್ತೀರಾ? ದಯವಿಟ್ಟು ದೃಢೀಕರಿಸಿ.`,
+    ml: `മികച്ചത്! നിങ്ങൾക്ക് ₹${price} ഒന്നിന് ${unit} വിലയിൽ ${quantity} ${unit} വാങ്ങണോ? ദയവായി സ്ഥിരീകരിക്കുക.`,
+    pa: `ਸ਼ਾਨਦਾਰ! ਕੀ ਤੁਸੀਂ ₹${price} ਪ੍ਰਤੀ ${unit} ਦੀ ਕੀਮਤ 'ਤੇ ${quantity} ${unit} ਖਰੀਦਣਾ ਚਾਹੁੰਦੇ ਹੋ? ਕਿਰਪਾ ਕਰਕੇ ਪੁਸ਼ਟੀ ਕਰੋ.`,
+    ur: `بہترین! کیا آپ ₹${price} فی ${unit} کی قیمت پر ${quantity} ${unit} خریدنا چاہتے ہیں؟ براہ کرم تصدیق کریں۔`,
+    or: `ଉତ୍କୃଷ୍ଟ! ଆପଣ ₹${price} ପ୍ରତି ${unit} ମୂଲ୍ୟରେ ${quantity} ${unit} କିଣିବାକୁ ଚାହୁଁଛନ୍ତି କି? ଦୟାକରି ନିଶ୍ଚିତ କରନ୍ତୁ।`,
+    as: `উৎকৃষ্ট! আপুনি ₹${price} প্ৰতি ${unit} মূল্যত ${quantity} ${unit} কিনিব বিচাৰে নেকি? অনুগ্ৰহ কৰি নিশ্চিত কৰক।`,
+    mai: `बढ़िया! की अहाँ ₹${price} प्रति ${unit} के दाम पर ${quantity} ${unit} किनब चाहैत छी? कृपया पुष्टि करू।`,
+    sa: `उत्तमम्! भवान् ₹${price} प्रति ${unit} मूल्येन ${quantity} ${unit} क्रेतुम् इच्छति वा? कृपया पुष्टीकरोतु।`,
+    kok: `छान! तुमकां ₹${price} प्रति ${unit} या किंमतीन ${quantity} ${unit} विकत घेवंचें आसा? कृपया पुष्टी करा.`,
+    mni: `Great! Do you want to buy ${quantity} ${unit} at ₹${price} per ${unit}? Please confirm.`,
+    ne: `उत्कृष्ट! के तपाईं ₹${price} प्रति ${unit} को मूल्यमा ${quantity} ${unit} किन्न चाहनुहुन्छ? कृपया पुष्टि गर्नुहोस्।`,
+    brx: `Great! Do you want to buy ${quantity} ${unit} at ₹${price} per ${unit}? Please confirm.`,
+    doi: `शानदार! क्या तुस ₹${price} प्रति ${unit} दी कीमत पर ${quantity} ${unit} खरीदना चांह दे ओ? कृपया पुष्टि करो।`,
+    ks: `بہترین! کیا آپ ₹${price} فی ${unit} کی قیمت پر ${quantity} ${unit} خریدنا چاہتے ہیں؟ براہ کرم تصدیق کریں۔`,
+    sat: `Great! Do you want to buy ${quantity} ${unit} at ₹${price} per ${unit}? Please confirm.`,
+    sd: `بهترين! ڇا توهان ₹${price} في ${unit} جي قيمت تي ${quantity} ${unit} خريد ڪرڻ چاهيو ٿا؟ مهرباني ڪري تصديق ڪريو۔`
+  };
+  
+  return messages[language] || messages.en;
+}

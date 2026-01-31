@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Fixed Bengali numeral extraction in listing creation
+- Fixed Seller Chat Logic: refined negotiation flow and buyer/seller role handling
 - Fixed translation file structure and duplicate content
-- Improved pattern matching for listing extraction
+- Improved pattern matching for listing extraction and negotiation
 - Enhanced error messages in user's language
 
 ### Changed

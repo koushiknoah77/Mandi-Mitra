@@ -31,6 +31,7 @@
 #### b. Negotiation Assistant
 - Real-time negotiation in any language
 - Intent detection (offer, counter-offer, accept, reject)
+- **Role-Aware Logic**: Correctly handles buyer vs seller perspectives
 - Simplified prompts for better responses
 - **Service**: `geminiService.negotiate()`
 

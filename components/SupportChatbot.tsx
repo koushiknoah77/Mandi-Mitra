@@ -18,19 +18,19 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
   ]);
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  
+
   const { state: voiceState, listen, cancel } = useVoiceAssistant(language);
 
   // Update greeting when language changes if conversation hasn't started
   useEffect(() => {
     // If it's the initial state (only 1 bot message), update it to the new language
     if (messages.length === 1 && messages[0].sender === 'bot') {
-       setMessages([{
-         id: '0',
-         sender: 'bot',
-         text: getLabel('supportWelcome', language),
-         timestamp: Date.now()
-       }]);
+      setMessages([{
+        id: '0',
+        sender: 'bot',
+        text: getLabel('supportWelcome', language),
+        timestamp: Date.now()
+      }]);
     }
   }, [language, messages.length]);
 
@@ -55,8 +55,8 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
         // Use fallback response system
         responseText = getFallbackResponse(text, language);
       }
-      
-      const botMsg: SupportMessage = { id: (Date.now()+1).toString(), sender: 'bot', text: responseText, timestamp: Date.now() };
+
+      const botMsg: SupportMessage = { id: (Date.now() + 1).toString(), sender: 'bot', text: responseText, timestamp: Date.now() };
       setMessages(prev => [...prev, botMsg]);
       analyticsService.logEvent('support_query_success', undefined, { language });
     } catch (error) {
@@ -74,13 +74,24 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
         ml: 'ക്ഷമിക്കണം, എനിക്ക് ഇപ്പോൾ പ്രശ്നമുണ്ട്. ദയവായി വീണ്ടും ശ്രമിക്കുക.',
         pa: 'ਮਾਫ਼ ਕਰਨਾ, ਮੈਨੂੰ ਹੁਣ ਮੁਸ਼ਕਲ ਆ ਰਹੀ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
         ur: 'معذرت، مجھے ابھی پریشانی ہو رہی ہے۔ براہ کرم دوبارہ کوشش کریں۔',
-        or: 'କ୍ଷମା କରନ୍ତୁ, ମୋତେ ବର୍ତ୍ତମାନ ଅସୁବିଧା ହେଉଛି। ଦୟାକରି ପୁନର୍ବାର ଚେଷ୍ଟା କରନ୍ତୁ।'
+        or: 'କ୍ଷମା କରନ୍ତୁ, ମୋତେ ବର୍ତ୍ତମାନ ଅସୁବିଧା ହେଉଛି। ଦୟାକରି ପୁନର୍ବାର ଚେଷ୍ଟା କରନ୍ତୁ।',
+        as: 'Sorry, I\'m having trouble right now. Please try again.',
+        mai: 'Sorry, I\'m having trouble right now. Please try again.',
+        sa: 'Sorry, I\'m having trouble right now. Please try again.',
+        kok: 'Sorry, I\'m having trouble right now. Please try again.',
+        mni: 'Sorry, I\'m having trouble right now. Please try again.',
+        ne: 'Sorry, I\'m having trouble right now. Please try again.',
+        brx: 'Sorry, I\'m having trouble right now. Please try again.',
+        doi: 'Sorry, I\'m having trouble right now. Please try again.',
+        ks: 'Sorry, I\'m having trouble right now. Please try again.',
+        sat: 'Sorry, I\'m having trouble right now. Please try again.',
+        sd: 'Sorry, I\'m having trouble right now. Please try again.'
       };
-      const botMsg: SupportMessage = { 
-        id: (Date.now()+1).toString(), 
-        sender: 'bot', 
-        text: errorMessages[language] || errorMessages.en, 
-        timestamp: Date.now() 
+      const botMsg: SupportMessage = {
+        id: (Date.now() + 1).toString(),
+        sender: 'bot',
+        text: errorMessages[language] || errorMessages.en,
+        timestamp: Date.now()
       };
       setMessages(prev => [...prev, botMsg]);
     } finally {
@@ -96,7 +107,7 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
 
   if (!isOpen) {
     return (
-      <button 
+      <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-6 w-16 h-16 bg-black text-white rounded-[1.5rem] shadow-2xl hover:scale-110 transition-transform flex items-center justify-center z-50 group"
       >
@@ -109,8 +120,8 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
     <div className="fixed bottom-6 right-6 w-80 h-[30rem] bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-100 flex flex-col overflow-hidden z-50 animate-fade-in-up">
       {/* Header */}
       <div className="bg-white p-6 border-b border-gray-50 flex justify-between items-center">
-        <button 
-          onClick={() => setIsOpen(false)} 
+        <button
+          onClick={() => setIsOpen(false)}
           className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 mr-3"
           title={getLabel('back', language)}
         >
@@ -119,8 +130,8 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
           </svg>
         </button>
         <div className="flex-1">
-           <h3 className="font-bold text-xl text-gray-900">{getLabel('support', language)}</h3>
-           <p className="text-xs text-gray-500 font-medium">{getLabel('aiAssistant', language)}</p>
+          <h3 className="font-bold text-xl text-gray-900">{getLabel('support', language)}</h3>
+          <p className="text-xs text-gray-500 font-medium">{getLabel('aiAssistant', language)}</p>
         </div>
         <button onClick={() => setIsOpen(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200">
           <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -137,30 +148,30 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
           </div>
         ))}
         {isTyping && (
-           <div className="flex justify-start">
-             <div className="bg-white px-4 py-3 rounded-[1.5rem] rounded-tl-sm shadow-sm flex gap-1.5">
-               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
-               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75"></div>
-               <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150"></div>
-             </div>
-           </div>
+          <div className="flex justify-start">
+            <div className="bg-white px-4 py-3 rounded-[1.5rem] rounded-tl-sm shadow-sm flex gap-1.5">
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce"></div>
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-75"></div>
+              <div className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-150"></div>
+            </div>
+          </div>
         )}
       </div>
 
       {/* Input */}
       <div className="p-3 bg-white border-t border-gray-100 flex items-center gap-2">
         <div className="transform scale-75 origin-center">
-           <VoiceIndicator state={voiceState} onClick={handleVoiceInput} />
+          <VoiceIndicator state={voiceState} onClick={handleVoiceInput} />
         </div>
-        <input 
-          type="text" 
+        <input
+          type="text"
           placeholder={getLabel('askHelp', language)}
           className="flex-1 text-sm bg-gray-100 border-none rounded-full px-4 py-3 focus:ring-0 outline-none"
           onKeyDown={(e) => {
-             if (e.key === 'Enter') {
-                handleSend(e.currentTarget.value);
-                e.currentTarget.value = '';
-             }
+            if (e.key === 'Enter') {
+              handleSend(e.currentTarget.value);
+              e.currentTarget.value = '';
+            }
           }}
         />
       </div>
