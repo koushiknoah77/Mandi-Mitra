@@ -1,6 +1,6 @@
 import { GoogleGenAI } from "@google/genai";
 
-const apiKey = "AIzaSyBi8H08aS7OHerZuR5eZsSePXI_cQuE5Wg";
+const apiKey = "";
 
 const modelsToTest = [
     "gemini-1.5-flash",
