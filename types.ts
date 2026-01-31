@@ -1,7 +1,7 @@
 // Language Types
-export type SupportedLanguageCode = 
-  | 'hi' | 'bn' | 'te' | 'mr' | 'ta' | 'gu' | 'ur' | 'kn' | 'or' | 'ml' 
-  | 'pa' | 'as' | 'mai' | 'sa' | 'kok' | 'mni' | 'ne' | 'brx' | 'doi' 
+export type SupportedLanguageCode =
+  | 'hi' | 'bn' | 'te' | 'mr' | 'ta' | 'gu' | 'ur' | 'kn' | 'or' | 'ml'
+  | 'pa' | 'as' | 'mai' | 'sa' | 'kok' | 'mni' | 'ne' | 'brx' | 'doi'
   | 'ks' | 'sat' | 'sd' | 'en';
 
 export interface LanguageConfig {
@@ -46,6 +46,7 @@ export interface ListingData {
 export interface NegotiationIntent {
   type: 'offer' | 'counter_offer' | 'accept' | 'reject' | 'inquiry' | 'casual' | 'deal_closure';
   price?: number;
+  quantity?: number;
   unit?: string;
   confidence: number;
 }
@@ -143,6 +144,7 @@ export interface Deal {
   invoiceUrl?: string;
   produceName?: string;
   unit?: string;
+  notes?: string;
 }
 
 // Conversation History Types

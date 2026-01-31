@@ -17,6 +17,10 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
   const [activeTab, setActiveTab] = useState<'transactions' | 'conversations'>('transactions');
   const [selectedConversation, setSelectedConversation] = useState<ConversationHistory | null>(null);
 
+  // Filter deals and conversations for the current user
+  const userTransactions = transactions.filter(t => t.buyerId === user.id || t.sellerId === user.id);
+  const userConversations = conversations.filter(c => c.participants.buyerId === user.id || c.participants.sellerId === user.id);
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
     return date.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -58,14 +62,14 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
             <button
               onClick={() => setActiveTab('transactions')}
               className={`flex-1 py-4 px-6 font-bold text-sm transition-all relative ${activeTab === 'transactions'
-                  ? 'text-emerald-600'
-                  : 'text-slate-500 hover:text-slate-700'
+                ? 'text-emerald-600'
+                : 'text-slate-500 hover:text-slate-700'
                 }`}
             >
               {getLabel('transactionHistory', user.language)}
-              {transactions.length > 0 && (
+              {userTransactions.length > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-black">
-                  {transactions.length}
+                  {userTransactions.length}
                 </span>
               )}
               {activeTab === 'transactions' && (
@@ -75,14 +79,14 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
             <button
               onClick={() => setActiveTab('conversations')}
               className={`flex-1 py-4 px-6 font-bold text-sm transition-all relative ${activeTab === 'conversations'
-                  ? 'text-emerald-600'
-                  : 'text-slate-500 hover:text-slate-700'
+                ? 'text-emerald-600'
+                : 'text-slate-500 hover:text-slate-700'
                 }`}
             >
               {getLabel('conversationHistory', user.language)}
-              {conversations.length > 0 && (
+              {userConversations.length > 0 && (
                 <span className="ml-2 px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-black">
-                  {conversations.length}
+                  {userConversations.length}
                 </span>
               )}
               {activeTab === 'conversations' && (
@@ -95,7 +99,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
           <div className="flex-1 overflow-y-auto p-6">
             {activeTab === 'transactions' && (
               <div className="space-y-4">
-                {transactions.length === 0 ? (
+                {userTransactions.length === 0 ? (
                   <div className="text-center py-20">
                     <div className="w-20 h-20 bg-slate-100 rounded-full mx-auto mb-4 flex items-center justify-center">
                       <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -111,7 +115,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                     </p>
                   </div>
                 ) : (
-                  transactions.map((deal) => (
+                  userTransactions.map((deal) => (
                     <div
                       key={deal.id}
                       className="bg-white border border-slate-200 rounded-[24px] p-6 hover:shadow-lg transition-shadow"
@@ -126,8 +130,8 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                           </p>
                         </div>
                         <div className={`px-3 py-1 rounded-full text-xs font-bold ${deal.status === 'completed'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'bg-orange-100 text-orange-700'
+                          ? 'bg-emerald-100 text-emerald-700'
+                          : 'bg-orange-100 text-orange-700'
                           }`}>
                           {deal.status === 'completed' ? '✓ Completed' : 'Pending'}
                         </div>
@@ -181,7 +185,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
 
             {activeTab === 'conversations' && (
               <div className="space-y-4">
-                {conversations.length === 0 ? (
+                {userConversations.length === 0 ? (
                   <div className="text-center py-20">
                     <div className="w-20 h-20 bg-slate-100 rounded-full mx-auto mb-4 flex items-center justify-center">
                       <svg className="w-10 h-10 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -192,7 +196,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                     <p className="text-slate-500 text-sm">Your negotiation chats will appear here</p>
                   </div>
                 ) : (
-                  conversations.map((conv) => (
+                  userConversations.map((conv) => (
                     <div
                       key={conv.id}
                       className="bg-white border border-slate-200 rounded-[24px] p-6 hover:shadow-lg transition-shadow cursor-pointer"
@@ -227,10 +231,10 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
                               </p>
                             </div>
                             <div className={`px-3 py-1 rounded-full text-xs font-bold shrink-0 ml-2 ${conv.dealStatus === 'completed'
-                                ? 'bg-emerald-100 text-emerald-700'
-                                : conv.dealStatus === 'cancelled'
-                                  ? 'bg-slate-100 text-slate-600'
-                                  : 'bg-orange-100 text-orange-700'
+                              ? 'bg-emerald-100 text-emerald-700'
+                              : conv.dealStatus === 'cancelled'
+                                ? 'bg-slate-100 text-slate-600'
+                                : 'bg-orange-100 text-orange-700'
                               }`}>
                               {conv.dealStatus === 'completed' ? '✓ Closed' :
                                 conv.dealStatus === 'cancelled' ? 'Cancelled' : 'Active'}
@@ -266,6 +270,7 @@ export const ProfileHistory: React.FC<ProfileHistoryProps> = ({
           listing={selectedConversation.listing}
           userLanguage={user.language}
           userRole={user.role!}
+          user={user}
           onClose={() => setSelectedConversation(null)}
           existingConversation={selectedConversation}
         />

@@ -159,9 +159,9 @@ Hindi, Bengali, Telugu, Marathi, Tamil, Gujarati, Urdu, Kannada, Odia, Malayalam
 
 ### API Configuration
 
-The app uses **Google Gemini 2.5 Flash** model for optimal performance and quota limits.
+The app uses **Google Gemini 3 Flash** model for cutting-edge performance and intelligence.
 
-Current version: `v3.0.9-SIMPLE`
+Current version: `v4.0.0-NEXT`
 
 ### Live Price System
 
@@ -227,7 +227,7 @@ npm run lint     # Run ESLint
 - Hard refresh browser: Ctrl+Shift+R
 
 **2. 429 API Quota Exceeded**
-- Free tier: 20 requests/day for gemini-2.5-flash
+- Free tier: 20 requests/day for gemini-3-flash
 - Price caching (1 hour) minimizes API calls
 - Wait for quota reset or upgrade to paid tier
 - App falls back to cached/mock data automatically
@@ -268,7 +268,7 @@ npm run lint     # Run ESLint
 - ✅ **Navbar Profile Access** - Click avatar (showing phone digits) to access profile
 
 ### v3.0.9-SIMPLE
-- ✅ Simplified to single Gemini model (`gemini-2.5-flash`)
+- ✅ Upgraded to latest Gemini model (`gemini-3-flash-preview`)
 - ✅ Removed complex fallback logic
 - ✅ Improved negotiation prompts
 - ✅ Better error handling
