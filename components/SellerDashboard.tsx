@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
-import { UserProfile, ListingData, Listing, UserRole } from '../types';
+import type { UserProfile, ListingData, Listing } from '../types';
+import { UserRole } from '../types';
 import { geminiService } from '../services/geminiService';
 import { cloudinaryService } from '../services/cloudinaryService';
 import { analyticsService } from '../services/analyticsService';
+import { useListings } from '../contexts/ListingsContext';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
 import { VoiceIndicator } from './VoiceIndicator';
 import { NegotiationView } from './NegotiationView';
+import { ProfileHistory } from './ProfileHistory';
 import { LiveMarketTicker } from './LiveMarketTicker';
 import { getLabel } from '../utils/translations';
+import { extractListingFallback, getExtractionErrorMessage } from '../utils/fallbackListingExtraction';
 
 interface SellerDashboardProps {
   user: UserProfile;
@@ -19,11 +23,24 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
   const [isExtracting, setIsExtracting] = useState(false);
   const [extractionError, setExtractionError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'create' | 'my-listings'>('create');
+  const [showProfileHistory, setShowProfileHistory] = useState(false);
   
-  const [myListings, setMyListings] = useState<Listing[]>([]);
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [activeNegotiationListing, setActiveNegotiationListing] = useState<Listing | null>(null);
+  
+  // Use shared listings from context
+  const { listings, addListing, removeListing } = useListings();
+  
+  // Filter to show only this seller's listings
+  const myListings = listings.filter(l => l.sellerId === user.id);
+
+  const handleDeleteListing = (listingId: string) => {
+    if (window.confirm(getLabel('confirmDelete', user.language))) {
+      removeListing(listingId);
+      analyticsService.logEvent('listing_deleted', user.id, { listingId });
+    }
+  };
 
   const { state: voiceState, listen, cancel } = useVoiceAssistant(user.language);
 
@@ -37,13 +54,26 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
     setExtractionError(null);
     
     try {
-      const data = await geminiService.extractListingData(text);
+      // Try AI extraction first
+      let data;
+      try {
+        data = await geminiService.extractListingData(text);
+      } catch (aiError) {
+        console.warn("AI extraction failed, using fallback:", aiError);
+        // Use fallback extraction
+        data = extractListingFallback(text, user.language);
+        
+        if (!data) {
+          throw new Error("Fallback extraction also failed");
+        }
+      }
+      
       setExtractedData(data);
       setExtractionError(null);
       analyticsService.logEvent('listing_extract_success', user.id);
     } catch (e: any) {
-      console.error(e);
-      setExtractionError(e.message || getLabel('extractionFailed', user.language));
+      console.error("Listing extraction error:", e);
+      setExtractionError(getExtractionErrorMessage(user.language));
       analyticsService.logEvent('listing_extract_fail', user.id);
     } finally {
       setIsExtracting(false);
@@ -87,8 +117,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
     const newListing: Listing = {
       id: Date.now().toString(),
       sellerId: user.id,
-      sellerName: "Me",
-      location: user.location?.address || "Local Mandi",
+      sellerName: user.name,
+      location: user.location?.address || user.state,
       coordinates: user.location ? { lat: user.location.lat, lng: user.location.lng } : undefined,
       produceName: extractedData.produceName,
       quantity: extractedData.quantity,
@@ -102,7 +132,8 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
       createdAt: new Date().toISOString()
     };
 
-    setMyListings(prev => [newListing, ...prev]);
+    // Add to global listings context
+    addListing(newListing);
     analyticsService.logEvent('listing_created', user.id, { produce: extractedData?.produceName });
     setExtractedData(null);
     setListingText("");
@@ -365,10 +396,12 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
                           {getLabel('viewOffers', user.language)}
                         </button>
                         <button 
-                          className="px-6 py-3 border-2 border-slate-200 text-slate-600 font-bold rounded-full hover:bg-slate-50 transition-all"
+                          onClick={() => handleDeleteListing(listing.id)}
+                          className="px-6 py-3 border-2 border-red-200 text-red-600 font-bold rounded-full hover:bg-red-50 transition-all"
+                          title={getLabel('deleteListing', user.language)}
                         >
                           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                           </svg>
                         </button>
                       </div>
@@ -390,6 +423,14 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
           userLanguage={user.language}
           userRole={UserRole.SELLER}
           onClose={() => setActiveNegotiationListing(null)}
+        />
+      )}
+
+      {/* Profile History Modal */}
+      {showProfileHistory && (
+        <ProfileHistory
+          user={user}
+          onClose={() => setShowProfileHistory(false)}
         />
       )}
     </div>

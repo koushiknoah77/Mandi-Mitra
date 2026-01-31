@@ -4,6 +4,7 @@ import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
 import { VoiceIndicator } from './VoiceIndicator';
 import { geminiService } from '../services/geminiService';
 import { analyticsService } from '../services/analyticsService';
+import { getFallbackResponse } from '../utils/fallbackResponses';
 import { getLabel } from '../utils/translations';
 
 interface SupportChatbotProps {
@@ -46,14 +47,42 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
     setIsTyping(true);
 
     try {
-      const responseText = await geminiService.generateSupportResponse(text, language);
+      let responseText;
+      try {
+        responseText = await geminiService.generateSupportResponse(text, language);
+      } catch (aiError) {
+        console.warn("AI support failed, using fallback:", aiError);
+        // Use fallback response system
+        responseText = getFallbackResponse(text, language);
+      }
+      
       const botMsg: SupportMessage = { id: (Date.now()+1).toString(), sender: 'bot', text: responseText, timestamp: Date.now() };
       setMessages(prev => [...prev, botMsg]);
-      // Auto-speak disabled for better user experience
-      // speak(responseText, language);
       analyticsService.logEvent('support_query_success', undefined, { language });
     } catch (error) {
-      console.error(error);
+      console.error("Support chat error:", error);
+      // Final fallback - error message in user's language
+      const errorMessages: Record<SupportedLanguageCode, string> = {
+        en: 'Sorry, I\'m having trouble right now. Please try again.',
+        hi: 'क्षमा करें, मुझे अभी परेशानी हो रही है। कृपया पुन: प्रयास करें।',
+        bn: 'দুঃখিত, আমার এখন সমস্যা হচ্ছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
+        te: 'క్షమించండి, నాకు ఇప్పుడు సమస్య ఉంది. దయచేసి మళ్లీ ప్రయత్నించండి.',
+        mr: 'क्षमस्व, मला आत्ता अडचण येत आहे. कृपया पुन्हा प्रयत्न करा.',
+        ta: 'மன்னிக்கவும், எனக்கு இப்போது சிக்கல் உள்ளது. மீண்டும் முயற்சிக்கவும்.',
+        gu: 'માફ કરશો, મને અત્યારે મુશ્કેલી આવી રહી છે. કૃપા કરીને ફરી પ્રયાસ કરો.',
+        kn: 'ಕ್ಷಮಿಸಿ, ನನಗೆ ಈಗ ತೊಂದರೆಯಾಗುತ್ತಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+        ml: 'ക്ഷമിക്കണം, എനിക്ക് ഇപ്പോൾ പ്രശ്നമുണ്ട്. ദയവായി വീണ്ടും ശ്രമിക്കുക.',
+        pa: 'ਮਾਫ਼ ਕਰਨਾ, ਮੈਨੂੰ ਹੁਣ ਮੁਸ਼ਕਲ ਆ ਰਹੀ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
+        ur: 'معذرت، مجھے ابھی پریشانی ہو رہی ہے۔ براہ کرم دوبارہ کوشش کریں۔',
+        or: 'କ୍ଷମା କରନ୍ତୁ, ମୋତେ ବର୍ତ୍ତମାନ ଅସୁବିଧା ହେଉଛି। ଦୟାକରି ପୁନର୍ବାର ଚେଷ୍ଟା କରନ୍ତୁ।'
+      };
+      const botMsg: SupportMessage = { 
+        id: (Date.now()+1).toString(), 
+        sender: 'bot', 
+        text: errorMessages[language] || errorMessages.en, 
+        timestamp: Date.now() 
+      };
+      setMessages(prev => [...prev, botMsg]);
     } finally {
       setIsTyping(false);
     }
@@ -80,7 +109,16 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
     <div className="fixed bottom-6 right-6 w-80 h-[30rem] bg-white rounded-[2rem] shadow-[0_20px_60px_-15px_rgba(0,0,0,0.3)] border border-gray-100 flex flex-col overflow-hidden z-50 animate-fade-in-up">
       {/* Header */}
       <div className="bg-white p-6 border-b border-gray-50 flex justify-between items-center">
-        <div>
+        <button 
+          onClick={() => setIsOpen(false)} 
+          className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 mr-3"
+          title={getLabel('back', language)}
+        >
+          <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div className="flex-1">
            <h3 className="font-bold text-xl text-gray-900">{getLabel('support', language)}</h3>
            <p className="text-xs text-gray-500 font-medium">{getLabel('aiAssistant', language)}</p>
         </div>

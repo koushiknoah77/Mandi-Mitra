@@ -10,10 +10,12 @@ fileMatchPattern: "components/{BuyerDashboard,SellerDashboard,NegotiationView,Li
 
 ### Features
 - Create new listings (voice or manual)
-- View active listings
+- View active listings (synced globally via ListingsContext)
 - Manage inventory
 - Track negotiations
-- View market prices
+- View AI-powered live market prices with 1-hour caching
+- Access profile & history dashboard via navbar avatar
+- View listing history and past conversations
 - Access analytics
 
 ### Listing Creation Flow
@@ -27,12 +29,15 @@ fileMatchPattern: "components/{BuyerDashboard,SellerDashboard,NegotiationView,Li
 **Component**: `components/BuyerDashboard.tsx`
 
 ### Features
-- Browse available listings
+- Browse available listings (mock + user-created via shared state)
 - Filter by commodity, location, price
-- View market trends
+- View AI-powered live market trends with smart caching
 - Initiate negotiations
 - Complete purchases
 - Track orders
+- Access profile & history dashboard via navbar avatar
+- View transaction history and past conversations
+- Reopen and continue previous negotiations
 
 ### Purchase Flow
 1. Browse listings
@@ -81,16 +86,35 @@ Deal: Completed or continues
 **Service**: `services/mandiService.ts`
 
 ### Features
-- Real-time mandi prices
+- **AI-Powered Live Prices**: Uses Gemini AI to search Google for current mandi prices
+- **Smart Caching**: 1-hour cache in localStorage to minimize API calls
+- **Reliable Sources**: Fetches from AGMARKNET, government portals, agricultural websites
+- **Fallback Chain**: AI fetch → Cached data → Mock data (always works)
 - Price trends and analytics
 - Commodity comparisons
 - Location-based pricing
 
 ### Usage
 ```typescript
+// Fetches live price with AI (cached for 1 hour)
 const marketPrice = await mandiService.getMarketPrice(commodity, location);
-const trend = await mandiService.getPriceTrend(commodity, days);
+
+// Get multiple live rates for ticker
+const liveRates = await mandiService.getLiveRates();
+
+// Clear cache (for testing or forcing refresh)
+mandiService.clearCache();
 ```
+
+### AI Price Fetching
+The service uses Gemini AI with Google Search to fetch real-time prices:
+1. Checks cache first (1-hour expiration)
+2. If expired, asks AI to search for current prices
+3. AI returns structured JSON with price data from reliable sources
+4. Caches result for 1 hour
+5. Falls back to mock data if AI fails
+
+No extra API keys needed - uses existing Gemini API key!
 
 ## Image Management
 **Service**: `services/cloudinaryService.ts`
@@ -145,6 +169,94 @@ const trend = await mandiService.getPriceTrend(commodity, days);
 ```typescript
 analyticsService.logEvent('event_name', userId, properties);
 ```
+
+## Profile & History Dashboard
+**Component**: `components/ProfileHistory.tsx`
+
+### Features
+- **Transaction History Tab**: View all completed deals (buying/selling)
+- **Conversation History Tab**: View all past negotiations
+- **User-Specific Filtering**: Shows only relevant data for current user
+- **Conversation Reopening**: Click any conversation to continue negotiating
+- **Deal Status Tracking**: Completed, ongoing, rejected deals
+- **Multilingual Support**: All labels translated to user's language
+
+### Access
+- Click navbar avatar (showing last 2 digits of phone number)
+- Or click "Profile & History" text button on desktop
+
+### Data Structure
+```typescript
+interface ConversationHistory {
+  id: string;
+  listingId: string;
+  listingTitle: string;
+  otherPartyName: string;
+  lastMessage: string;
+  timestamp: Date;
+  dealStatus: 'ongoing' | 'completed' | 'rejected';
+  messages: Message[];
+}
+```
+
+## Shared Listings System
+**Context**: `contexts/ListingsContext.tsx`
+
+### Features
+- **Global State Management**: React Context API for app-wide state
+- **Real-Time Sync**: Seller creates listing → immediately visible to all buyers
+- **Persistent Storage**: localStorage with automatic save/load
+- **Combined Data**: Merges mock listings with user-created listings
+- **Transaction Tracking**: Stores all completed deals
+- **Conversation History**: Stores all negotiation messages
+
+### Usage
+```typescript
+const { 
+  listings,           // All listings (mock + user-created)
+  addListing,         // Add new listing
+  updateListing,      // Update existing listing
+  transactions,       // All completed deals
+  addTransaction,     // Record new transaction
+  conversations,      // All conversation history
+  addConversation,    // Add new conversation
+  updateConversation  // Update existing conversation
+} = useListings();
+```
+
+### Data Flow
+```
+Seller creates listing
+  ↓
+addListing() called
+  ↓
+ListingsContext updates state
+  ↓
+localStorage saves data
+  ↓
+All components re-render with new data
+  ↓
+Buyer sees new listing immediately
+```
+
+## Live Market Ticker
+**Component**: `components/LiveMarketTicker.tsx`
+
+### Features
+- **AI-Powered Prices**: Fetches live prices using Gemini AI
+- **Auto-Scrolling**: Infinite horizontal scroll animation
+- **Price Trends**: Shows up/down/stable indicators with percentage change
+- **Smart Caching**: Uses 1-hour cached data from mandiService
+- **Fallback Data**: Shows mock data if AI fetch fails
+- **Hover to Pause**: Animation pauses on hover for better readability
+
+### Display Elements
+- Commodity name
+- Market location
+- Modal price (₹/quintal)
+- Price range (min-max)
+- Trend indicator (▲▼—)
+- Percentage change
 
 ## Best Practices
 

@@ -1,39 +1,22 @@
 # Mandi Mitra - Project Overview
 
 ## Project Description
-Mandi Mitra (Market Friend) is a voice-first multilingual agricultural trade platform that connects farmers (sellers) and buyers in India. The platform enables seamless agricultural commodity trading with support for 23 Indian languages plus English, powered by real-time AI and voice recognition.
+Mandi Mitra (Market Friend) is a voice-first multilingual agricultural trade platform that connects farmers (sellers) and buyers in India. The platform enables seamless agricultural commodity trading with support for 23 Indian languages plus English.
 
 ## Core Features
-
-### Voice-First Interface
-- **Multi-language voice recognition**: Automatic detection of ANY Indian language
-- **Hands-free interaction**: Complete listing creation via voice
-- **Browser Web Speech API**: Native speech recognition and synthesis
-- **Confidence scoring**: Selects best transcription from multiple alternatives
-- **Automatic fallback**: Falls back to Hindi if primary language unsupported
-
-### AI-Powered Features
-- **Listing extraction**: Gemini AI extracts structured data from natural language
-- **Language detection**: Automatically detects which Indian language was spoken
-- **Negotiation assistance**: AI-powered negotiation with intent detection
-- **Content moderation**: Flags inappropriate content and price deviations
-- **Support chatbot**: Multilingual AI customer support
-- **Real-time processing**: All AI responses generated in real-time (no mocks)
-
-### Multilingual Support
-- **24 languages**: 23 Indian languages + English
-- **Real-time translation**: Automatic translation during negotiations
-- **Native script support**: Devanagari, Bengali, Telugu, Tamil, Gujarati, etc.
-- **RTL language support**: Urdu, Kashmiri, Sindhi
-- **Voice in any language**: Speak in any supported language, AI detects automatically
-
-### Marketplace Features
-- **Seller Dashboard**: Create and manage listings with voice or text
-- **Buyer Dashboard**: Browse, filter, and negotiate deals
-- **Image upload**: Real-time image upload with correct preview display
-- **Live market data**: Real-time mandi price ticker
-- **AI negotiation**: Real-time negotiation with translation
-- **Deal closure**: Invoice generation and deal tracking
+- **Voice-First Interface**: Voice assistant for hands-free interaction
+- **Multilingual Support**: 23 Indian languages + English with real-time translation
+- **Dual Dashboards**: Separate interfaces for sellers (farmers) and buyers
+- **AI-Powered Live Prices**: Real-time mandi price fetching using Gemini AI with Google Search
+- **Smart Price Caching**: 1-hour cache to minimize API calls and improve performance
+- **AI-Powered Negotiation**: Gemini AI for intent detection and moderation
+- **Profile & History Dashboard**: Transaction and conversation history for all users
+- **Shared Listings System**: Global state management with React Context API
+- **Conversation Reopening**: Continue previous negotiations from history
+- **Image Gallery**: Multi-image support for product listings
+- **Offline Support**: Works with limited connectivity
+- **Session Management**: 24-hour session persistence with localStorage
+- **Support Chatbot**: AI-powered customer support
 
 ## Technology Stack
 - **Frontend**: React 19 + TypeScript + Vite
@@ -48,10 +31,11 @@ Mandi Mitra (Market Friend) is a voice-first multilingual agricultural trade pla
 2. **Buyer**: Browses listings, makes offers, completes purchases
 
 ## Project Structure
-- `/components`: React components (dashboards, onboarding, chat, etc.)
-- `/services`: External service integrations (Gemini, Bhashini, Cloudinary, etc.)
+- `/components`: React components (dashboards, onboarding, chat, profile history, etc.)
+- `/contexts`: React Context providers (ListingsContext for global state)
+- `/services`: External service integrations (Gemini AI, mandi prices, invoices, etc.)
 - `/hooks`: Custom React hooks (voice assistant, online status)
-- `/utils`: Utility functions (translations, location)
+- `/utils`: Utility functions (translations for 24 languages, location)
 - `/data`: Mock data for development
 - `/types.ts`: TypeScript type definitions
 - `/constants.ts`: Application constants and configuration
@@ -67,52 +51,8 @@ Mandi Mitra (Market Friend) is a voice-first multilingual agricultural trade pla
   - No mock fallbacks - real AI only
 
 ## Design Principles
-- **Voice-first**: Optimized for voice interaction
-- **Mobile-first**: Responsive design for mobile devices
-- **Accessibility**: WCAG compliance with screen reader support
-- **Minimal UI**: Clean interface with floating pill navigation
-- **Gradient backgrounds**: Orange-emerald theme
-- **Error boundaries**: Graceful error handling
-- **Offline support**: Works with limited connectivity
-- **Real AI**: No mocks - all AI features use real Gemini API
-
-## Recent Implementations
-
-### ✅ Multi-Language Voice Detection (Latest)
-- Automatic language detection for ANY Indian language
-- Enhanced voice recognition with confidence scoring
-- Gemini AI detects language from transcribed text
-- Supports 23+ Indian languages without pre-selection
-
-### ✅ Image Upload Fix
-- Fixed bug where random images were shown instead of uploaded photos
-- Now uses `URL.createObjectURL()` to display actual uploaded files
-- Real-time preview of uploaded images
-
-### ✅ Listings Display
-- Added "My Listings" tab to Seller Dashboard
-- Shows all created listings with images, details, and actions
-- Empty state with call-to-action when no listings exist
-- Auto-switches to listings tab after publishing
-
-## Performance Characteristics
-- Voice recognition latency: ~1-2 seconds
-- AI processing time: ~2-3 seconds
-- Total time (speak to display): ~3-5 seconds
-- Accuracy: 90%+ for clear speech
-- Build size: ~568 KB (gzipped: ~147 KB)
-
-## Browser Compatibility
-- ✅ Chrome/Edge: Full support (recommended)
-- ✅ Safari: Good support
-- ⚠️ Firefox: Limited speech recognition support
-
-## Future Enhancements
-- Offline data synchronization
-- Payment gateway integration
-- Advanced search and filtering
-- Seller analytics dashboard
-- Push notifications
-- Quality verification from images
-- Logistics integration
-- Weather and crop advisories
+- Mobile-first responsive design
+- Accessibility compliance
+- Minimal, clean UI with floating pill navigation
+- Gradient backgrounds (orange-emerald theme)
+- Error boundaries for graceful error handling

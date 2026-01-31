@@ -1,10 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Listing, Message, SupportedLanguageCode, Deal, ModerationResult, UserRole } from '../types';
+import { Listing, Message, SupportedLanguageCode, Deal, ModerationResult, UserRole, ConversationHistory } from '../types';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
+import { useListings } from '../contexts/ListingsContext';
 import { VoiceIndicator } from './VoiceIndicator';
+import { RatingModal } from './RatingModal';
 import { geminiService } from '../services/geminiService';
 import { invoiceService } from '../services/invoiceService';
 import { mandiService } from '../services/mandiService';
+import { pdfExport } from '../utils/pdfExport';
+import { getFallbackResponse, shouldFinalizeDeal, extractPriceFromMessage, extractQuantityFromMessage } from '../utils/fallbackResponses';
 import { MandiPulse } from './MandiPulse';
 import { AIModeratorAlert } from './AIModeratorAlert';
 import { getLabel } from '../utils/translations';
@@ -17,6 +21,7 @@ interface NegotiationViewProps {
 }
 
 export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userLanguage, userRole, onClose }) => {
+  const { addTransaction, addConversation, updateConversation } = useListings();
   const myId = userRole === UserRole.SELLER ? 'seller' : 'user';
   const otherId = userRole === UserRole.SELLER ? 'user' : 'seller';
   const otherName = userRole === UserRole.SELLER ? getLabel('potentialBuyer', userLanguage) : listing.sellerName;
@@ -44,6 +49,8 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
   const [dealStage, setDealStage] = useState<'chat' | 'confirming' | 'finalized'>('chat');
   const [finalOffer, setFinalOffer] = useState({ price: listing.pricePerUnit, quantity: listing.quantity });
   const [generatedInvoiceUrl, setGeneratedInvoiceUrl] = useState<string | null>(null);
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [completedDeal, setCompletedDeal] = useState<Deal | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { state: voiceState, listen, cancel } = useVoiceAssistant(userLanguage);
@@ -56,25 +63,60 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
     if (!text.trim()) return;
     setModerationAlert(null);
     
-    // Moderate
-    try {
-      const marketData = await mandiService.getMarketPrice(listing.produceName, listing.location);
-      const benchmarkPrice = marketData?.modalPrice || listing.pricePerUnit;
-      const moderation = await geminiService.moderateMessage(text, finalOffer.price, benchmarkPrice);
-      if (moderation.flagged) {
-        setModerationAlert(moderation);
-        if (moderation.reason === 'Inappropriate language') return; 
-      }
-    } catch (e) { console.warn("Moderation check failed", e); }
-
     const userMsg: Message = { id: Date.now().toString(), senderId: myId, text, timestamp: Date.now() };
     setMessages((prev: Message[]) => [...prev, userMsg]);
     setIsAiProcessing(true);
     setInputText("");
 
     try {
-      // Pass userLanguage to negotiate
-      const aiResponse = await geminiService.negotiate(listing, [...messages, userMsg], userRole, finalOffer, userLanguage);
+      // Moderate first
+      try {
+        const marketData = await mandiService.getMarketPrice(listing.produceName, listing.location);
+        const benchmarkPrice = marketData?.modalPrice || listing.pricePerUnit;
+        const moderation = await geminiService.moderateMessage(text, finalOffer.price, benchmarkPrice);
+        if (moderation.flagged) {
+          setModerationAlert(moderation);
+          if (moderation.reason === 'Inappropriate language') {
+            setIsAiProcessing(false);
+            return;
+          }
+        }
+      } catch (e) { 
+        console.warn("Moderation check failed", e); 
+      }
+
+      // Try AI negotiation first
+      let aiResponse;
+      let usedFallback = false;
+      
+      try {
+        aiResponse = await geminiService.negotiate(listing, [...messages, userMsg], userRole, finalOffer, userLanguage);
+      } catch (aiError) {
+        console.warn("AI negotiation failed, using fallback:", aiError);
+        usedFallback = true;
+        
+        // Check if user wants to finalize deal
+        if (shouldFinalizeDeal(text)) {
+          aiResponse = {
+            text: getFallbackResponse(text, userLanguage),
+            status: 'agreed' as const
+          };
+        } else {
+          // Extract price/quantity if mentioned
+          const mentionedPrice = extractPriceFromMessage(text);
+          const mentionedQuantity = extractQuantityFromMessage(text);
+          
+          // Use fallback response system
+          const fallbackText = getFallbackResponse(text, userLanguage);
+          aiResponse = {
+            text: fallbackText,
+            status: 'ongoing' as const,
+            proposedPrice: mentionedPrice || undefined,
+            proposedQuantity: mentionedQuantity || undefined
+          };
+        }
+      }
+
       setIsAiProcessing(false);
 
       if (aiResponse.text) {
@@ -84,16 +126,39 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
           text: aiResponse.text,
           timestamp: Date.now()
         }]);
-        // Auto-speak disabled
       }
 
+      // Update prices/status (works with both AI and fallback)
       if (aiResponse.proposedPrice) setFinalOffer((prev) => ({ ...prev, price: aiResponse.proposedPrice! }));
       if (aiResponse.proposedQuantity) setFinalOffer((prev) => ({ ...prev, quantity: aiResponse.proposedQuantity! }));
       if (aiResponse.status === 'agreed') setTimeout(() => setDealStage('confirming'), 1000);
 
     } catch (e) {
-      console.error(e);
+      console.error("Message handling error:", e);
       setIsAiProcessing(false);
+      
+      // Final fallback - show error message in user's language
+      const errorMessages: Record<SupportedLanguageCode, string> = {
+        en: 'Sorry, I\'m having trouble responding. Please try again.',
+        hi: 'क्षमा करें, मुझे जवाब देने में परेशानी हो रही है। कृपया पुन: प्रयास करें।',
+        bn: 'দুঃখিত, আমার উত্তর দিতে সমস্যা হচ্ছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
+        te: 'క్షమించండి, నాకు ప్రతిస్పందించడంలో సమస్య ఉంది. దయచేసి మళ్లీ ప్రయత్నించండి.',
+        mr: 'क्षमस्व, मला प्रतिसाद देण्यात अडचण येत आहे. कृपया पुन्हा प्रयत्न करा.',
+        ta: 'மன்னிக்கவும், எனக்கு பதிலளிப்பதில் சிக்கல் உள்ளது. மீண்டும் முயற்சிக்கவும்.',
+        gu: 'માફ કરશો, મને જવાબ આપવામાં મુશ્કેલી આવી રહી છે. કૃપા કરીને ફરી પ્રયાસ કરો.',
+        kn: 'ಕ್ಷಮಿಸಿ, ನನಗೆ ಪ್ರತಿಕ್ರಿಯಿಸಲು ತೊಂದರೆಯಾಗುತ್ತಿದೆ. ದಯವಿಟ್ಟು ಮತ್ತೆ ಪ್ರಯತ್ನಿಸಿ.',
+        ml: 'ക്ഷമിക്കണം, എനിക്ക് പ്രതികരിക്കാൻ പ്രശ്നമുണ്ട്. ദയവായി വീണ്ടും ശ്രമിക്കുക.',
+        pa: 'ਮਾਫ਼ ਕਰਨਾ, ਮੈਨੂੰ ਜਵਾਬ ਦੇਣ ਵਿੱਚ ਮੁਸ਼ਕਲ ਆ ਰਹੀ ਹੈ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।',
+        ur: 'معذرت، مجھے جواب دینے میں پریشانی ہو رہی ہے۔ براہ کرم دوبارہ کوشش کریں۔',
+        or: 'କ୍ଷମା କରନ୍ତୁ, ମୋତେ ଉତ୍ତର ଦେବାରେ ଅସୁବିଧା ହେଉଛି। ଦୟାକରି ପୁନର୍ବାର ଚେଷ୍ଟା କରନ୍ତୁ।'
+      };
+      
+      setMessages((prev: Message[]) => [...prev, {
+        id: (Date.now() + 1).toString(),
+        senderId: 'system',
+        text: errorMessages[userLanguage] || errorMessages.en,
+        timestamp: Date.now()
+      }]);
     }
   };
 
@@ -110,14 +175,40 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
       listingId: listing.id,
       sellerId: listing.sellerId,
       buyerId: userRole === UserRole.BUYER ? 'currentUser' : 'simulatedBuyer',
+      produceName: listing.produceName,
+      unit: listing.unit,
       finalPrice: finalOffer.price,
       finalQuantity: finalOffer.quantity,
       totalAmount: finalOffer.price * finalOffer.quantity,
       status: 'completed',
       timestamp: Date.now()
     };
+    
+    // Generate invoice
     const url = await invoiceService.generateInvoice(deal);
+    deal.invoiceUrl = url;
+    
+    // Save transaction to history
+    addTransaction(deal);
+    
+    // Save conversation to history
+    const conversation: ConversationHistory = {
+      id: `CONV-${Date.now()}`,
+      listing,
+      participants: {
+        sellerId: listing.sellerId,
+        sellerName: listing.sellerName,
+        buyerId: userRole === UserRole.BUYER ? 'currentUser' : 'simulatedBuyer',
+        buyerName: userRole === UserRole.BUYER ? 'You' : getLabel('potentialBuyer', userLanguage)
+      },
+      messages,
+      dealStatus: 'completed',
+      lastMessageAt: Date.now()
+    };
+    addConversation(conversation);
+    
     setGeneratedInvoiceUrl(url);
+    setCompletedDeal(deal);
     setDealStage('finalized');
     setMessages(prev => [...prev, {
       id: Date.now().toString(),
@@ -125,6 +216,11 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
       text: getLabel('dealConfirmed', userLanguage),
       timestamp: Date.now()
     }]);
+    
+    // Show rating modal after 2 seconds
+    setTimeout(() => {
+      setShowRatingModal(true);
+    }, 2000);
   };
 
   return (
@@ -133,7 +229,16 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
         
         {/* Header - M3 Top Bar Style */}
         <div className="bg-[#fdfdf5] p-4 flex items-center justify-between sticky top-0 z-20 shadow-sm">
-          <div className="flex items-center gap-4">
+          <button 
+            onClick={onClose} 
+            className="w-10 h-10 flex items-center justify-center bg-[#ecefe9] rounded-full text-[#414942] hover:bg-[#e2e7e0] transition-colors"
+            title={getLabel('back', userLanguage)}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          <div className="flex items-center gap-4 flex-1 ml-2">
              <div className="w-10 h-10 rounded-full bg-[#c4eed0] text-[#072114] flex items-center justify-center text-xl overflow-hidden font-bold">
                 {userRole === UserRole.SELLER ? '👤' : <img src={listing.imageUrl || "https://via.placeholder.com/50"} className="w-full h-full object-cover" />}
              </div>
@@ -231,10 +336,23 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
               <div className="text-5xl mb-4">🎉</div>
               <h3 className="font-bold text-2xl mb-2">{getLabel('dealClosed', userLanguage)}</h3>
               <p className="opacity-80 text-sm mb-6 font-medium">{getLabel('dealSuccessMsg', userLanguage)}</p>
-              {generatedInvoiceUrl && (
-                <a href={generatedInvoiceUrl} target="_blank" rel="noopener noreferrer" className="inline-block bg-[#072114] text-white px-8 py-4 rounded-full font-bold shadow-md hover:bg-black transition-colors">
-                  {getLabel('viewInvoice', userLanguage)}
-                </a>
+              {generatedInvoiceUrl && completedDeal && (
+                <div className="flex gap-3 justify-center">
+                  <a 
+                    href={generatedInvoiceUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer" 
+                    className="inline-block bg-[#072114] text-white px-8 py-4 rounded-full font-bold shadow-md hover:bg-black transition-colors"
+                  >
+                    {getLabel('viewInvoice', userLanguage)}
+                  </a>
+                  <button
+                    onClick={() => pdfExport.exportInvoicePDF(completedDeal)}
+                    className="inline-block bg-white text-[#072114] px-8 py-4 rounded-full font-bold shadow-md hover:bg-slate-50 transition-colors border-2 border-[#072114]"
+                  >
+                    📥 Download PDF
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -267,6 +385,18 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
           </div>
         )}
       </div>
+
+      {/* Rating Modal */}
+      {showRatingModal && completedDeal && (
+        <RatingModal
+          deal={completedDeal}
+          currentUserId={myId}
+          otherUserId={otherId}
+          otherUserName={otherName}
+          language={userLanguage}
+          onClose={() => setShowRatingModal(false)}
+        />
+      )}
     </div>
   );
 };

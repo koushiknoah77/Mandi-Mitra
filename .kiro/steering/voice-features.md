@@ -9,19 +9,10 @@ fileMatchPattern: "{hooks/useVoiceAssistant.ts,components/VoiceIndicator.tsx,ser
 **File**: `hooks/useVoiceAssistant.ts`
 
 ### Core Functionality
-- Voice recording and transcription with automatic language detection
-- Text-to-speech synthesis in multiple languages
-- Multi-language processing with confidence scoring
-- State management for voice interactions
-
-### Latest Implementation: Multi-Language Auto-Detection
-The voice assistant now automatically detects ANY Indian language without requiring pre-selection:
-
-- **Automatic Language Detection**: Detects 23+ Indian languages automatically
-- **Confidence Scoring**: Uses `maxAlternatives: 3` to get multiple transcription options
-- **Best Transcript Selection**: Selects transcript with highest confidence score
-- **Automatic Fallback**: Falls back to Hindi if primary language unsupported
-- **Gemini AI Integration**: AI detects language from transcribed text
+- Voice recording and transcription
+- Text-to-speech synthesis
+- Language-aware processing
+- State management
 
 ### Voice States
 ```typescript
@@ -36,29 +27,21 @@ interface VoiceState {
 ### Usage Pattern
 ```typescript
 const {
-  state: voiceState,
+  startListening,
+  stopListening,
   speak,
-  listen,
-  cancel
+  voiceState
 } = useVoiceAssistant(language);
 
-// Listen for voice input (auto-detects language)
-const transcript = await listen();
+// Start recording
+await startListening();
 
-// Speak text in specified language
-await speak("Hello farmer", language);
+// Stop and get transcript
+const transcript = await stopListening();
 
-// Cancel ongoing speech/listening
-cancel();
+// Speak text
+await speak("Hello farmer");
 ```
-
-### Multi-Language Detection Flow
-1. User clicks microphone → Recording starts
-2. User speaks in ANY language → Browser captures audio
-3. Speech recognition → Converts to text with confidence scores
-4. Best transcript selected → Highest confidence score wins
-5. Gemini AI processes → Detects language and extracts data
-6. Result displayed → Normalized data shown in UI
 
 ## Voice Indicator Component
 **Component**: `components/VoiceIndicator.tsx`

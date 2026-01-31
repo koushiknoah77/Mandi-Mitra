@@ -320,6 +320,31 @@ Be helpful and friendly.`,
       throw new Error("Failed to generate support response. Please try again.");
     }
   }
+
+  /**
+   * Search and respond with AI-generated answer
+   * Note: Google Search grounding requires specific Gemini API setup
+   * For now, uses AI's knowledge to provide best estimate
+   */
+  async searchAndRespond(prompt: string): Promise<string> {
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.MODEL,
+        contents: prompt,
+        config: {
+          temperature: 0.7,
+          maxOutputTokens: 2000,
+        }
+      });
+
+      return response.text || "";
+    } catch (error) {
+      console.error("Gemini Search Error:", error);
+      throw new Error("Failed to search and respond. Please try again.");
+    }
+  }
 }
 
+// Export both the class and instance for proper typing
 export const geminiService = new GeminiService();
+export type { GeminiService };

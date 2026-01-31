@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { SUPPORTED_LANGUAGES } from './constants';
-import { UserProfile, SupportedLanguageCode } from './types';
+import type { UserProfile, SupportedLanguageCode, Deal, ConversationHistory } from './types';
 import { OnboardingFlow } from './components/OnboardingFlow';
 import { BuyerDashboard } from './components/BuyerDashboard';
 import { SellerDashboard } from './components/SellerDashboard';
 import { SupportChatbot } from './components/SupportChatbot';
+import { ProfileHistory } from './components/ProfileHistory';
+import { ListingsProvider } from './contexts/ListingsContext';
 import { analyticsService } from './services/analyticsService';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -16,6 +18,7 @@ const SESSION_DURATION = 24 * 60 * 60 * 1000; // 24 hours
 
 function App() {
   const [user, setUser] = useState<UserProfile | null>(null);
+  const [showProfileHistory, setShowProfileHistory] = useState(false);
   const isOnline = useOnlineStatus();
 
   // Session Persistence & Expiration (Requirement 13)
@@ -124,6 +127,17 @@ function App() {
               </div>
             </div>
 
+            {/* Profile History Button */}
+            <button 
+              onClick={() => setShowProfileHistory(true)}
+              className="hidden sm:flex items-center gap-2 text-sm font-bold text-slate-600 hover:bg-slate-100 px-5 py-2.5 rounded-full transition-all"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {getLabel('profileHistory', currentLang)}
+            </button>
+
             {/* Logout Chip */}
             <button 
               onClick={handleLogout}
@@ -132,10 +146,14 @@ function App() {
               {getLabel('logout', currentLang)}
             </button>
             
-            {/* User Avatar */}
-            <div className="w-11 h-11 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-white">
+            {/* User Avatar - Click to open Profile */}
+            <button 
+              onClick={() => setShowProfileHistory(true)}
+              className="w-11 h-11 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-white hover:ring-4 hover:ring-emerald-200 transition-all cursor-pointer"
+              aria-label={getLabel('profileHistory', currentLang)}
+            >
                {user?.phoneNumber.slice(-2)}
-            </div>
+            </button>
           </div>
         </header>
       </div>
@@ -153,12 +171,22 @@ function App() {
 
       {/* Support Bot */}
       <SupportChatbot language={currentLang} />
+
+      {/* Profile History Modal */}
+      {showProfileHistory && user && (
+        <ProfileHistory
+          user={user}
+          onClose={() => setShowProfileHistory(false)}
+        />
+      )}
     </div>
   );
 
   return (
     <ErrorBoundary>
-      {user ? renderDashboard() : <OnboardingFlow onComplete={handleLogin} />}
+      <ListingsProvider>
+        {user ? renderDashboard() : <OnboardingFlow onComplete={handleLogin} />}
+      </ListingsProvider>
     </ErrorBoundary>
   );
 }

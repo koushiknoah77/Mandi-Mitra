@@ -2,22 +2,18 @@
 
 This directory contains Kiro AI configuration, steering files, and feature specifications for the Mandi Mitra project.
 
-## About Mandi Mitra
-
-Mandi Mitra (Market Friend) is a voice-first multilingual agricultural trade platform that connects farmers (sellers) and buyers in India. The platform enables seamless agricultural commodity trading with support for 23 Indian languages plus English, powered by real-time AI and voice recognition.
-
 ## Structure
 
 ### `/steering`
 Steering files provide context-aware guidance to Kiro AI when working on specific parts of the codebase.
 
-- **project-overview.md**: High-level project description, tech stack, and architecture
+- **project-overview.md**: High-level project description and architecture
 - **coding-standards.md**: TypeScript, React, and code organization standards
 - **testing-guidelines.md**: Testing philosophy and best practices
 - **voice-features.md**: Voice assistant and speech integration guide
 - **multilingual-support.md**: Translation and language support guide (24 languages)
-- **marketplace-features.md**: Marketplace and trading features guide
-- **ai-services.md**: Gemini AI service integration patterns
+- **marketplace-features.md**: Marketplace, trading, profile & history features guide
+- **ai-services.md**: AI service integration patterns (Gemini AI, live prices, etc.)
 
 ### `/specs`
 Feature specifications following the spec-driven development methodology. Each spec contains:
@@ -25,22 +21,37 @@ Feature specifications following the spec-driven development methodology. Each s
 - `design.md`: Technical design and correctness properties
 - `tasks.md`: Implementation task list
 
-Currently, all initial features have been implemented. Future specs will be added here as new features are developed.
-
 ### `/settings`
 Configuration files for Kiro AI features (MCP servers, hooks, etc.)
 
-## Key Features Implemented
+## Recent Features (January 2026)
 
-✅ **Voice-First Interface**: Multi-language voice recognition with automatic language detection
-✅ **AI-Powered Listing Creation**: Gemini AI extracts structured data from natural language
-✅ **Image Upload**: Real-time image upload with preview
-✅ **Multilingual Support**: 24 languages with real-time translation
-✅ **Seller Dashboard**: Create and manage listings with voice or text
-✅ **Buyer Dashboard**: Browse, filter, and negotiate deals
-✅ **AI Negotiation**: Real-time negotiation with AI moderation
-✅ **Live Market Data**: Real-time mandi price ticker
-✅ **Support Chatbot**: AI-powered customer support
+### AI-Powered Live Prices
+- Real-time mandi price fetching using Gemini AI with Google Search
+- Smart 1-hour caching to minimize API calls
+- Fallback chain: AI → Cache → Mock data
+- Sources: AGMARKNET, government portals, agricultural websites
+- **Files**: `services/mandiService.ts`, `services/geminiService.ts`
+
+### Profile & History Dashboard
+- Transaction history for buyers and sellers
+- Conversation history with deal status tracking
+- Reopen and continue previous negotiations
+- Access via navbar avatar (phone number digits)
+- **Files**: `components/ProfileHistory.tsx`, `components/ProfileHistoryWrapper.tsx`
+
+### Shared Listings System
+- Global state management with React Context API
+- Real-time sync: seller creates → buyer sees immediately
+- Persistent storage in localStorage
+- Combines mock + user-created listings
+- **Files**: `contexts/ListingsContext.tsx`
+
+### Multilingual Support
+- 24 languages (23 Indian + English)
+- Voice input/output in all languages
+- Real-time translation during negotiations
+- **Files**: `utils/translations.ts`, `constants.ts`
 
 ## Usage
 
@@ -49,7 +60,6 @@ Steering files are automatically included when working on matching files. For ex
 - Working on `hooks/useVoiceAssistant.ts` → includes `voice-features.md`
 - Working on `utils/translations.ts` → includes `multilingual-support.md`
 - Working on `components/BuyerDashboard.tsx` → includes `marketplace-features.md`
-- Working on `services/geminiService.ts` → includes `ai-services.md`
 
 ### Creating Specs
 To create a new feature spec:
@@ -74,15 +84,6 @@ Or run all tasks:
 Ask Kiro: "Run all tasks for [spec name]"
 ```
 
-## Technology Stack
-
-- **Frontend**: React 19 + TypeScript + Vite
-- **AI/ML**: Google Gemini AI (@google/genai) - Real-time AI everywhere
-- **Speech**: Browser Web Speech API (recognition & synthesis)
-- **Styling**: Tailwind CSS (utility-first)
-- **State Management**: React hooks
-- **Build Tool**: Vite
-
 ## Best Practices
 
 1. **Keep steering files focused**: Each file should cover a specific domain
@@ -90,13 +91,3 @@ Ask Kiro: "Run all tasks for [spec name]"
 3. **Use file matching**: Set `fileMatchPattern` to auto-include steering files
 4. **Document decisions**: Use specs to document feature decisions and trade-offs
 5. **Iterate on specs**: Refine requirements and design before implementation
-6. **Real AI Only**: No mock services - all AI features use real Gemini API
-
-## Environment Setup
-
-Required environment variables in `.env.local`:
-```
-VITE_GEMINI_API_KEY=your_api_key_here
-```
-
-The app will throw a clear error on startup if the API key is missing.

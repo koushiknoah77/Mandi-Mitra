@@ -1,8 +1,12 @@
 import React, { useState, useMemo } from 'react';
 import { UserProfile, Listing, UserRole } from '../types';
-import { MOCK_LISTINGS } from '../data/mockData';
 import { ListingCard } from './ListingCard';
 import { NegotiationView } from './NegotiationView';
+import { ProfileHistory } from './ProfileHistory';
+import { AnalyticsDashboard } from './AnalyticsDashboard';
+import { useListings } from '../contexts/ListingsContext';
+import { useFavorites } from '../hooks/useFavorites';
+import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import { getLabel } from '../utils/translations';
 import { calculateDistance, formatDistance } from '../utils/location';
 import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
@@ -20,6 +24,14 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
   const [activeNegotiation, setActiveNegotiation] = useState<Listing | null>(null);
   const [filterCategory, setFilterCategory] = useState('All');
   const [sortBy, setSortBy] = useState<'distance' | 'price' | 'recent'>('distance');
+  const [showProfileHistory, setShowProfileHistory] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showFavoritesOnly, setShowFavoritesOnly] = useState(false);
+  
+  // Use shared listings from context
+  const { listings } = useListings();
+  const { favorites, toggleFavorite, isFavorite, favoritesCount } = useFavorites(user.id);
+  const { queueLength } = useOfflineQueue();
 
   const { state: voiceState, listen, cancel } = useVoiceAssistant(user.language);
 
@@ -27,10 +39,11 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
   const userLng = user.location?.lng || 78.9629;
 
   const processedListings = useMemo(() => {
-    let results = MOCK_LISTINGS.filter(l => 
+    let results = listings.filter(l => 
       (l.produceName.toLowerCase().includes(searchTerm.toLowerCase()) || 
        l.location.toLowerCase().includes(searchTerm.toLowerCase())) &&
-      (filterCategory === 'All' || l.produceName.toLowerCase().includes(filterCategory.toLowerCase().slice(0, -1)))
+      (filterCategory === 'All' || l.produceName.toLowerCase().includes(filterCategory.toLowerCase().slice(0, -1))) &&
+      (!showFavoritesOnly || favorites.includes(l.id))
     );
 
     const withDistance = results.map(l => {
@@ -46,7 +59,7 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
       if (sortBy === 'price') return a.pricePerUnit - b.pricePerUnit;
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
     });
-  }, [searchTerm, filterCategory, sortBy, userLat, userLng]);
+  }, [searchTerm, filterCategory, sortBy, userLat, userLng, listings, showFavoritesOnly, favorites]);
 
   const handleVoiceSearch = async () => {
     if (voiceState.isListening) {
@@ -107,19 +120,69 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
           ))}
         </div>
 
-        <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-full shadow-sm border border-slate-200 hover:border-emerald-300 transition-colors">
-          <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">{getLabel('sort', user.language)}</span>
-          <select 
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as any)}
-            className="bg-transparent text-sm font-bold text-slate-900 outline-none border-none focus:ring-0 cursor-pointer p-0 tracking-tight"
+        <div className="flex items-center gap-3">
+          {/* Favorites Filter */}
+          <button
+            onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
+            className={`px-5 py-3 rounded-full text-sm font-bold transition-all duration-300 border flex items-center gap-2 ${
+              showFavoritesOnly
+                ? 'bg-red-50 text-red-700 border-red-200'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-red-300 hover:text-red-700 hover:bg-red-50'
+            }`}
           >
-            <option value="distance">{getLabel('sortNearest', user.language)}</option>
-            <option value="price">{getLabel('sortPriceLowHigh', user.language)}</option>
-            <option value="recent">{getLabel('sortRecent', user.language)}</option>
-          </select>
+            <svg className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+            {favoritesCount > 0 && (
+              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded-full text-xs font-black">
+                {favoritesCount}
+              </span>
+            )}
+          </button>
+
+          {/* Analytics Button */}
+          <button
+            onClick={() => setShowAnalytics(true)}
+            className="px-5 py-3 rounded-full text-sm font-bold bg-white text-slate-500 border border-slate-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50 transition-all duration-300 flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+            </svg>
+            📊
+          </button>
+
+          {/* Sort Dropdown */}
+          <div className="flex items-center gap-3 bg-white px-5 py-3 rounded-full shadow-sm border border-slate-200 hover:border-emerald-300 transition-colors">
+            <span className="text-sm font-bold text-slate-400 uppercase tracking-wider">{getLabel('sort', user.language)}</span>
+            <select 
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as any)}
+              className="bg-transparent text-sm font-bold text-slate-900 outline-none border-none focus:ring-0 cursor-pointer p-0 tracking-tight"
+            >
+              <option value="distance">{getLabel('sortNearest', user.language)}</option>
+              <option value="price">{getLabel('sortPriceLowHigh', user.language)}</option>
+              <option value="recent">{getLabel('sortRecent', user.language)}</option>
+            </select>
+          </div>
         </div>
       </div>
+
+      {/* Offline Queue Indicator */}
+      {queueLength > 0 && (
+        <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+            <svg className="w-5 h-5 text-orange-600 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <p className="font-bold text-orange-900 text-sm">
+              {queueLength} action{queueLength > 1 ? 's' : ''} pending sync
+            </p>
+            <p className="text-xs text-orange-700">Will sync when online</p>
+          </div>
+        </div>
+      )}
 
       {/* Listings Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8 px-2">
@@ -129,7 +192,9 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
             listing={listing} 
             language={user.language}
             distance={listing.distanceKm > 0 ? formatDistance(listing.distanceKm) : undefined}
-            onNegotiate={setActiveNegotiation} 
+            isFavorite={isFavorite(listing.id)}
+            onNegotiate={setActiveNegotiation}
+            onToggleFavorite={toggleFavorite}
           />
         ))}
       </div>
@@ -154,6 +219,24 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
           userLanguage={user.language}
           userRole={UserRole.BUYER}
           onClose={() => setActiveNegotiation(null)} 
+        />
+      )}
+
+      {/* Profile History Modal */}
+      {showProfileHistory && (
+        <ProfileHistory
+          user={user}
+          onClose={() => setShowProfileHistory(false)}
+        />
+      )}
+
+      {/* Analytics Dashboard Modal */}
+      {showAnalytics && (
+        <AnalyticsDashboard
+          userId={user.id}
+          userRole={UserRole.BUYER}
+          language={user.language}
+          onClose={() => setShowAnalytics(false)}
         />
       )}
     </div>

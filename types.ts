@@ -141,6 +141,25 @@ export interface Deal {
   status: 'pending' | 'completed';
   timestamp: number;
   invoiceUrl?: string;
+  produceName?: string;
+  unit?: string;
+}
+
+// Conversation History Types
+export interface ConversationHistory {
+  id: string;
+  listingId: string;
+  listing: Listing;
+  messages: Message[];
+  participants: {
+    buyerId: string;
+    buyerName: string;
+    sellerId: string;
+    sellerName: string;
+  };
+  lastMessageAt: number;
+  dealStatus: 'active' | 'completed' | 'cancelled';
+  deal?: Deal;
 }
 
 // Support Chat Types
