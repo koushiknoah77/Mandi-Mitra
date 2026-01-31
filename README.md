@@ -34,7 +34,7 @@ Mandi Mitra is a revolutionary agricultural marketplace that enables seamless co
 - 🔢 **Bengali Numerals** - Support for Bengali and Devanagari numerals
 - 🛡️ **Fallback Systems** - Work without AI using pattern matching
 
----
+----------
 
 ## 🚀 Quick Start
 
