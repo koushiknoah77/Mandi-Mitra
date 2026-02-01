@@ -4,20 +4,35 @@ import { ListingData, SupportedLanguageCode, NegotiationIntent, ModerationResult
 const apiKey = import.meta.env.VITE_GEMINI_API_KEY || (typeof process !== 'undefined' ? process.env.GEMINI_API_KEY : '');
 
 class GeminiService {
-    private client: GoogleGenAI;
+    private client: GoogleGenAI | null = null;
     private modelName = 'gemini-3-flash-preview';
+    private apiKeyPresent: boolean;
 
     constructor() {
+        this.apiKeyPresent = !!apiKey;
+        
         if (!apiKey) {
-            throw new Error("CRITICAL: Gemini API Key is missing. Set VITE_GEMINI_API_KEY in .env.local file. AI features cannot work without it.");
+            console.error("❌ CRITICAL: Gemini API Key is missing!");
+            console.error("📝 Set VITE_GEMINI_API_KEY in .env.local file");
+            console.error("🔗 Get your key from: https://aistudio.google.com/app/apikey");
+            // Don't throw - let the app start and show error in UI
+        } else {
+            this.client = new GoogleGenAI({
+                apiKey: apiKey,
+            });
+            console.log("✅ Gemini AI initialized successfully");
         }
+    }
 
-        this.client = new GoogleGenAI({
-            apiKey: apiKey,
-        });
+    private checkApiKey(): void {
+        if (!this.apiKeyPresent || !this.client) {
+            throw new Error("Gemini API Key is missing. Please add VITE_GEMINI_API_KEY to your .env.local file. Get your key from: https://aistudio.google.com/app/apikey");
+        }
     }
 
     async extractListingData(text: string, language?: SupportedLanguageCode): Promise<ListingData> {
+        this.checkApiKey();
+        
         try {
             const prompt = `You are a data extraction expert for Mandi Mitra, an agricultural marketplace in India. 
       Input text: "${text}" 
@@ -38,7 +53,7 @@ class GeminiService {
       3. If specific details are missing, use null.
       4. Ensure JSON is strictly valid.`;
 
-            const response = await this.client.models.generateContent({
+            const response = await this.client!.models.generateContent({
                 model: this.modelName,
                 contents: prompt,
                 config: { responseMimeType: "application/json" },
@@ -52,6 +67,8 @@ class GeminiService {
     }
 
     async extractUserProfile(text: string): Promise<{ name?: string; state?: string }> {
+        this.checkApiKey();
+        
         try {
             const prompt = `Extract user profile details from this text: "${text}". 
       Return VALID JSON with keys: 
@@ -60,7 +77,7 @@ class GeminiService {
       
       Look for patterns like "I am Ramesh from Punjab" or "My name is Suresh and I live in Haryana".`;
 
-            const response = await this.client.models.generateContent({
+            const response = await this.client!.models.generateContent({
                 model: this.modelName,
                 contents: prompt,
                 config: { responseMimeType: "application/json" },
@@ -74,6 +91,8 @@ class GeminiService {
     }
 
     async detectNegotiationIntent(message: string, context?: any): Promise<NegotiationIntent> {
+        this.checkApiKey();
+        
         try {
             const prompt = `Analyze this negotiation message: "${message}". 
       Context: ${JSON.stringify(context)}. 
@@ -85,7 +104,7 @@ class GeminiService {
       
       Role context: If sender is ${context?.role}, interpret intent from their perspective.`;
 
-            const response = await this.client.models.generateContent({
+            const response = await this.client!.models.generateContent({
                 model: this.modelName,
                 contents: prompt,
                 config: { responseMimeType: "application/json" },
@@ -99,6 +118,8 @@ class GeminiService {
     }
 
     async moderateContent(message: string, marketPrice?: any): Promise<ModerationResult> {
+        this.checkApiKey();
+        
         try {
             const prompt = `Moderate this message for an agricultural marketplace: "${message}". 
       Market price reference: ${JSON.stringify(marketPrice)}. 
@@ -108,7 +129,7 @@ class GeminiService {
       - priceDeviationPct: number (optional, % diff from market price)
       - advisory: string (optional, advice for the user)`;
 
-            const response = await this.client.models.generateContent({
+            const response = await this.client!.models.generateContent({
                 model: this.modelName,
                 contents: prompt,
                 config: { responseMimeType: "application/json" },
@@ -125,11 +146,13 @@ class GeminiService {
     }
 
     async generateSupportResponse(query: string, language: SupportedLanguageCode): Promise<string> {
+        this.checkApiKey();
+        
         try {
             const prompt = `You are a helpful support assistant for Mandi Mitra, an agricultural marketplace. 
       User query: "${query}". Respond in language code: ${language}. Keep it brief and helpful.`;
 
-            const response = await this.client.models.generateContent({
+            const response = await this.client!.models.generateContent({
                 model: this.modelName,
                 contents: prompt,
             });
@@ -142,9 +165,11 @@ class GeminiService {
     }
 
     async searchAndRespond(prompt: string): Promise<any> {
+        this.checkApiKey();
+        
         try {
             // Priority 1: AI with Google Search Grounding for live data
-            const response = await this.client.models.generateContent({
+            const response = await this.client!.models.generateContent({
                 model: this.modelName,
                 contents: prompt,
                 config: {
@@ -159,7 +184,7 @@ class GeminiService {
                 console.warn("⚠️ Grounding quota exceeded. Retrying with base model (no search)...");
                 try {
                     // Priority 2: Fallback to base model if search is limited
-                    const response = await this.client.models.generateContent({
+                    const response = await this.client!.models.generateContent({
                         model: this.modelName,
                         contents: prompt
                     });
@@ -176,11 +201,9 @@ class GeminiService {
     }
 
     async negotiate(history: any[], newMessage: string, language: string, context: any): Promise<any> {
+        this.checkApiKey();
+        
         try {
-            if (!apiKey) {
-                throw new Error("API key missing");
-            }
-
             const userRole = context?.role || UserRole.BUYER;
             const otherRole = userRole === UserRole.BUYER ? 'Seller' : 'Buyer';
             const listingPrice = context?.listing?.pricePerUnit || 3000;
@@ -224,14 +247,14 @@ Return ONLY JSON:
   "proposedQuantity": number (the quantity being discussed, default to listing quantity if not specified)
 }`;
 
-            const response = await this.client.models.generateContent({
+            const response = await this.client!.models.generateContent({
                 model: this.modelName,
                 contents: prompt,
                 config: { responseMimeType: "application/json" },
             });
 
             const text = response.text || "";
-            let result;
+            let result: any;
             try {
                 // Find potential JSON block
                 const jsonMatch = text.match(/\{[\s\S]*\}/);

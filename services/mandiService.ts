@@ -37,7 +37,7 @@ class MandiService {
   };
 
   private requestQueue: Promise<void> = Promise.resolve();
-  private MIN_REQUEST_INTERVAL = 2500; // 2.5s gap for safe RPM
+  private MIN_REQUEST_INTERVAL = 5000; // Increased to 5 seconds to avoid rate limits
   private activeLookups: Map<string, Promise<MandiRecord | null>> = new Map();
 
   /**
