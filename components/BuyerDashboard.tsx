@@ -9,9 +9,10 @@ import { useFavorites } from '../hooks/useFavorites';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
 import { getLabel } from '../utils/translations';
 import { calculateDistance, formatDistance } from '../utils/location';
-import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
 import { VoiceIndicator } from './VoiceIndicator';
 import { LiveMarketTicker } from './LiveMarketTicker';
+import { useVoiceCommands, useRegisterVoiceCommands, VoiceCommand } from '../contexts/VoiceCommandContext';
+
 
 interface BuyerDashboardProps {
   user: UserProfile;
@@ -32,8 +33,6 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
   const { listings } = useListings();
   const { favorites, toggleFavorite, isFavorite, favoritesCount } = useFavorites(user.id);
   const { queueLength } = useOfflineQueue();
-
-  const { state: voiceState, listen, cancel } = useVoiceAssistant(user.language);
 
   const userLat = user.location?.lat || 20.5937;
   const userLng = user.location?.lng || 78.9629;
@@ -61,12 +60,67 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
     });
   }, [searchTerm, filterCategory, sortBy, userLat, userLng, listings, showFavoritesOnly, favorites]);
 
+  // Voice Commands Registry
+  const voiceCommands = useMemo<VoiceCommand[]>(() => {
+    const commands: VoiceCommand[] = [];
+
+    // Category selection
+    CATEGORY_KEYS.forEach(catKey => {
+      const label = getLabel(`cat${catKey}`, user.language);
+      commands.push({
+        id: `category-${catKey}`,
+        keywords: [label, catKey],
+        callback: () => setFilterCategory(catKey),
+        description: `Select ${label} category`
+      });
+    });
+
+    // Sorting
+    commands.push(
+      { id: 'sort-distance', keywords: [getLabel('sortNearest', user.language), 'nearest', 'near', 'distance'], callback: () => setSortBy('distance'), description: 'Sort by distance' },
+      { id: 'sort-price', keywords: [getLabel('sortPriceLowHigh', user.language), 'price', 'cheap', 'lowest'], callback: () => setSortBy('price'), description: 'Sort by price' },
+      { id: 'sort-recent', keywords: [getLabel('sortRecent', user.language), 'recent', 'new', 'latest'], callback: () => setSortBy('recent'), description: 'Sort by recent' }
+    );
+
+    // Common Actions
+    commands.push(
+      { id: 'toggle-favorites', keywords: ['favorites', 'starred', 'likes'], callback: () => setShowFavoritesOnly(!showFavoritesOnly), description: 'Toggle search' },
+      { id: 'open-analytics', keywords: ['analytics', 'stats', 'dashboard'], callback: () => setShowAnalytics(true), description: 'Open analytics' },
+      { id: 'open-history', keywords: [getLabel('profileHistory', user.language), 'history', 'profile', 'my account'], callback: () => setShowProfileHistory(true), description: 'Open Profile' }
+    );
+
+    // Dynamic Search Command (Matches if starts with "search")
+    commands.push({
+      id: 'dynamic-search',
+      keywords: ['search', 'seek', 'find', 'khonjo', 'dhundo', 'khojen'],
+      callback: (transcript) => {
+        const keywords = ['search', 'seek', 'find', 'khonjo', 'dhundo', 'khojen'];
+        let term = transcript.toLowerCase();
+        for (const kw of keywords) {
+          if (term.includes(kw)) {
+            term = term.split(kw)[1]?.trim();
+            break;
+          }
+        }
+        if (term) setSearchTerm(term);
+      },
+      description: 'Search for something'
+    });
+
+    return commands;
+  }, [user.language, showFavoritesOnly, searchTerm]);
+
+  useRegisterVoiceCommands(voiceCommands);
+
+
+  const { startGlobalListen, voiceState: globalVoiceState, stopGlobalListen } = useVoiceCommands();
+
   const handleVoiceSearch = async () => {
-    if (voiceState.isListening) {
-      cancel();
+    if (globalVoiceState.isListening) {
+      stopGlobalListen();
       return;
     }
-    const transcript = await listen();
+    const transcript = await startGlobalListen();
     if (transcript) {
       setSearchTerm(transcript);
     }
@@ -95,7 +149,7 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
             />
             <div className="pr-4">
               <div className="scale-90 hover:scale-100 transition-transform">
-                <VoiceIndicator state={voiceState} onClick={handleVoiceSearch} />
+                <VoiceIndicator state={globalVoiceState} onClick={handleVoiceSearch} />
               </div>
             </div>
           </div>
@@ -110,8 +164,8 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
               key={catKey}
               onClick={() => setFilterCategory(catKey)}
               className={`px-6 py-3 rounded-full text-sm font-bold transition-all duration-300 whitespace-nowrap border active:scale-95 ${filterCategory === catKey
-                  ? 'bg-slate-900 text-white border-slate-900'
-                  : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50'
+                ? 'bg-slate-900 text-white border-slate-900'
+                : 'bg-white text-slate-500 border-slate-200 hover:border-emerald-300 hover:text-emerald-700 hover:bg-emerald-50'
                 }`}
             >
               {getLabel(`cat${catKey}`, user.language)}
@@ -124,8 +178,8 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
           <button
             onClick={() => setShowFavoritesOnly(!showFavoritesOnly)}
             className={`px-5 py-3 rounded-full text-sm font-bold transition-all duration-300 border flex items-center gap-2 ${showFavoritesOnly
-                ? 'bg-red-50 text-red-700 border-red-200'
-                : 'bg-white text-slate-500 border-slate-200 hover:border-red-300 hover:text-red-700 hover:bg-red-50'
+              ? 'bg-red-50 text-red-700 border-red-200'
+              : 'bg-white text-slate-500 border-slate-200 hover:border-red-300 hover:text-red-700 hover:bg-red-50'
               }`}
           >
             <svg className={`w-4 h-4 ${showFavoritesOnly ? 'fill-current' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">

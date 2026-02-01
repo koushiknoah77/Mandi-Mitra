@@ -11,6 +11,8 @@ import { analyticsService } from './services/analyticsService';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { getLabel } from './utils/translations';
+import { VoiceCommandProvider } from './contexts/VoiceCommandContext';
+
 
 const SESSION_KEY = 'mandi_user';
 const SESSION_TIMESTAMP_KEY = 'mandi_session_ts';
@@ -25,7 +27,7 @@ function App() {
   useEffect(() => {
     const savedUser = localStorage.getItem(SESSION_KEY);
     const savedTimestamp = localStorage.getItem(SESSION_TIMESTAMP_KEY);
-    
+
     if (savedUser && savedTimestamp) {
       const now = Date.now();
       const sessionAge = now - parseInt(savedTimestamp, 10);
@@ -103,7 +105,7 @@ function App() {
                 Mandi Mitra
               </h1>
               <span className="text-[10px] font-bold tracking-widest uppercase text-emerald-600">
-                 {user?.role === 'seller' ? getLabel('farmerStudio', currentLang) : getLabel('marketplace', currentLang)}
+                {user?.role === 'seller' ? getLabel('farmerStudio', currentLang) : getLabel('marketplace', currentLang)}
               </span>
             </div>
           </div>
@@ -111,7 +113,7 @@ function App() {
           <div className="flex items-center gap-2">
             {/* Language Chip */}
             <div className="relative group">
-              <select 
+              <select
                 value={user?.language}
                 onChange={(e) => handleLanguageChange(e.target.value as SupportedLanguageCode)}
                 className="appearance-none bg-slate-50 hover:bg-slate-100 text-slate-700 text-sm font-bold py-2.5 pl-4 pr-10 rounded-full focus:outline-none focus:ring-2 focus:ring-slate-200 transition-all cursor-pointer border border-transparent"
@@ -128,7 +130,7 @@ function App() {
             </div>
 
             {/* Profile History Button */}
-            <button 
+            <button
               onClick={() => setShowProfileHistory(true)}
               className="hidden sm:flex items-center gap-2 text-sm font-bold text-slate-600 hover:bg-slate-100 px-5 py-2.5 rounded-full transition-all"
             >
@@ -139,20 +141,20 @@ function App() {
             </button>
 
             {/* Logout Chip */}
-            <button 
+            <button
               onClick={handleLogout}
               className="hidden sm:block text-sm font-bold text-slate-500 hover:bg-rose-50 hover:text-rose-600 px-5 py-2.5 rounded-full transition-all"
             >
               {getLabel('logout', currentLang)}
             </button>
-            
+
             {/* User Avatar - Click to open Profile */}
-            <button 
+            <button
               onClick={() => setShowProfileHistory(true)}
               className="w-11 h-11 rounded-full bg-slate-900 text-white flex items-center justify-center text-sm font-bold shadow-sm ring-2 ring-white hover:ring-4 hover:ring-emerald-200 transition-all cursor-pointer"
               aria-label={getLabel('profileHistory', currentLang)}
             >
-               {user?.phoneNumber.slice(-2)}
+              {user?.phoneNumber.slice(-2)}
             </button>
           </div>
         </header>
@@ -169,10 +171,10 @@ function App() {
         </ErrorBoundary>
       </main>
 
-      {/* Support Bot */}
       <SupportChatbot language={currentLang} />
 
       {/* Profile History Modal */}
+
       {showProfileHistory && user && (
         <ProfileHistory
           user={user}
@@ -184,11 +186,14 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <ListingsProvider>
-        {user ? renderDashboard() : <OnboardingFlow onComplete={handleLogin} />}
-      </ListingsProvider>
+      <VoiceCommandProvider language={currentLang}>
+        <ListingsProvider>
+          {user ? renderDashboard() : <OnboardingFlow onComplete={handleLogin} />}
+        </ListingsProvider>
+      </VoiceCommandProvider>
     </ErrorBoundary>
   );
 }
+
 
 export default App;

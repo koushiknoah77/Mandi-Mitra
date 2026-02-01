@@ -5,7 +5,6 @@ import { geminiService } from '../services/geminiService';
 import { cloudinaryService } from '../services/cloudinaryService';
 import { analyticsService } from '../services/analyticsService';
 import { useListings } from '../contexts/ListingsContext';
-import { useVoiceAssistant } from '../hooks/useVoiceAssistant';
 import { VoiceIndicator } from './VoiceIndicator';
 import { NegotiationView } from './NegotiationView';
 import { ProfileHistory } from './ProfileHistory';
@@ -13,6 +12,8 @@ import { LiveMarketTicker } from './LiveMarketTicker';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
 import { getLabel } from '../utils/translations';
 import { extractListingFallback, getExtractionErrorMessage } from '../utils/fallbackListingExtraction';
+import { useVoiceCommands, useRegisterVoiceCommands, VoiceCommand } from '../contexts/VoiceCommandContext';
+
 
 interface SellerDashboardProps {
   user: UserProfile;
@@ -43,8 +44,6 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
       analyticsService.logEvent('listing_deleted', user.id, { listingId });
     }
   };
-
-  const { state: voiceState, listen, cancel } = useVoiceAssistant(user.language);
 
   const handleExtract = async (text: string) => {
     if (!text.trim()) {
@@ -82,12 +81,14 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
     }
   };
 
+  const { startGlobalListen, voiceState: globalVoiceState, stopGlobalListen } = useVoiceCommands();
+
   const handleVoiceInput = async () => {
-    if (voiceState.isSpeaking) {
-      cancel();
+    if (globalVoiceState.isListening) {
+      stopGlobalListen();
       return;
     }
-    const transcript = await listen();
+    const transcript = await startGlobalListen();
     if (transcript) {
       setListingText(transcript);
       handleExtract(transcript);
@@ -142,6 +143,28 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
     setUploadedImages([]);
     setActiveTab('my-listings');
   };
+
+  // Voice Commands Registry
+  const voiceCommands = React.useMemo<VoiceCommand[]>(() => {
+    const commands: VoiceCommand[] = [
+      { id: 'tab-create', keywords: [getLabel('createListing', user.language), 'create', 'sell', 'new listing'], callback: () => setActiveTab('create'), description: 'Go to Create' },
+      { id: 'tab-my-listings', keywords: [getLabel('myListings', user.language), 'my listings', 'listings', 'my produce'], callback: () => setActiveTab('my-listings'), description: 'Go to My Listings' },
+      { id: 'open-analytics-seller', keywords: ['analytics', 'stats', 'how am I doing'], callback: () => setShowAnalytics(true), description: 'Open Analytics' },
+      { id: 'open-profile-seller', keywords: [getLabel('profileHistory', user.language), 'profile', 'history', 'account'], callback: () => setShowProfileHistory(true), description: 'Open Profile' }
+    ];
+
+    if (activeTab === 'create' && extractedData) {
+      commands.push(
+        { id: 'confirm-publish', keywords: [getLabel('publishListing', user.language), 'publish', 'confirm', 'finish'], callback: handleCreate, description: 'Publish Listing' },
+        { id: 'discard-listing', keywords: [getLabel('discard', user.language), 'discard', 'cancel', 'delete this'], callback: () => { setExtractedData(null); setUploadedImages([]); }, description: 'Discard Listing' }
+      );
+    }
+
+    return commands;
+  }, [user.language, activeTab, extractedData]);
+
+  useRegisterVoiceCommands(voiceCommands);
+
 
   return (
     <div className="p-4 sm:p-8 max-w-4xl mx-auto font-sans">
@@ -200,11 +223,11 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
 
             <div className="flex justify-center relative z-10">
               <div className="bg-white/10 p-4 rounded-full backdrop-blur-sm border border-white/20 group-hover:scale-105 transition-transform duration-300">
-                <VoiceIndicator state={voiceState} onClick={handleVoiceInput} />
+                <VoiceIndicator state={globalVoiceState} onClick={handleVoiceInput} />
               </div>
             </div>
 
-            {voiceState.isListening && <p className="mt-8 text-white font-bold animate-pulse tracking-widest text-xs uppercase bg-black/20 inline-block px-4 py-1 rounded-full">{getLabel('listening', user.language)}</p>}
+            {globalVoiceState.isListening && <p className="mt-8 text-white font-bold animate-pulse tracking-widest text-xs uppercase bg-black/20 inline-block px-4 py-1 rounded-full">{getLabel('listening', user.language)}</p>}
           </div>
 
           <div className="flex items-center gap-6 text-slate-400 text-xs font-bold tracking-widest uppercase">
