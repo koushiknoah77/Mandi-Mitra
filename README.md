@@ -269,14 +269,6 @@ We welcome contributions! Here's how you can help:
 
 ---
 
-## 📞 Support
-
-- **Documentation**: Check `.kiro/` folder for detailed guides
-- **Bug Reports**: Open an issue on GitHub
-- **Feature Requests**: Open an issue with "enhancement" label
-- **Email**: support@mandimitra.in (placeholder)
-
----
 
 ## 🗺️ Roadmap
 
