@@ -52,8 +52,8 @@ export const SupportChatbot: React.FC<SupportChatbotProps> = ({ language }) => {
         responseText = await geminiService.generateSupportResponse(text, language);
       } catch (aiError) {
         console.warn("AI support failed, using fallback:", aiError);
-        // Use fallback response system
-        responseText = getFallbackResponse(text, language);
+        // Use fallback response system with empty context for support queries
+        responseText = getFallbackResponse(text, language, {}, 'seller');
       }
 
       const botMsg: SupportMessage = { id: (Date.now() + 1).toString(), sender: 'bot', text: responseText, timestamp: Date.now() };

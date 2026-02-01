@@ -10,6 +10,7 @@ import { NegotiationView } from './NegotiationView';
 import { ProfileHistory } from './ProfileHistory';
 import { LiveMarketTicker } from './LiveMarketTicker';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
+import { ErrorBoundary } from './ErrorBoundary';
 import { getLabel } from '../utils/translations';
 import { extractListingFallback, getExtractionErrorMessage } from '../utils/fallbackListingExtraction';
 import { useVoiceCommands, useRegisterVoiceCommands, VoiceCommand } from '../contexts/VoiceCommandContext';
@@ -452,13 +453,15 @@ export const SellerDashboard: React.FC<SellerDashboardProps> = ({ user }) => {
       <LiveMarketTicker language={user.language} />
 
       {activeNegotiationListing && (
-        <NegotiationView
-          listing={activeNegotiationListing}
-          userLanguage={user.language}
-          userRole={UserRole.SELLER}
-          user={user}
-          onClose={() => setActiveNegotiationListing(null)}
-        />
+        <ErrorBoundary>
+          <NegotiationView
+            listing={activeNegotiationListing}
+            userLanguage={user.language}
+            userRole={UserRole.SELLER}
+            user={user}
+            onClose={() => setActiveNegotiationListing(null)}
+          />
+        </ErrorBoundary>
       )}
 
       {/* Profile History Modal */}

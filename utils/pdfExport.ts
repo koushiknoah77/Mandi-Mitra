@@ -40,6 +40,11 @@ export const pdfExport = {
   },
 
   generateInvoiceHTML(deal: Deal): string {
+    // Format numbers with Indian locale (adds commas: 1,50,000)
+    const formatINR = (amount: number): string => {
+      return amount.toLocaleString('en-IN');
+    };
+
     return `
       <!DOCTYPE html>
       <html>
@@ -110,6 +115,10 @@ export const pdfExport = {
               font-weight: bold; 
               color: #166534;
             }
+            .amount-cell {
+              text-align: right;
+              font-weight: 600;
+            }
             .total { 
               font-size: 24px; 
               font-weight: bold; 
@@ -119,6 +128,7 @@ export const pdfExport = {
               padding: 20px;
               background: #f0fdf4;
               border-radius: 12px;
+              border: 2px solid #bbf7d0;
             }
             .qr { 
               text-align: center; 
@@ -151,6 +161,10 @@ export const pdfExport = {
               background: #dcfce7;
               color: #166534;
             }
+            .status-pending {
+              background: #fef3c7;
+              color: #92400e;
+            }
             .print-btn {
               background: #166534;
               color: white;
@@ -165,6 +179,9 @@ export const pdfExport = {
             }
             .print-btn:hover {
               background: #14532d;
+            }
+            .rupee {
+              font-family: Arial, sans-serif;
             }
           </style>
         </head>
@@ -205,13 +222,20 @@ export const pdfExport = {
             <strong>Role:</strong> Trader/Buyer
           </div>
 
+          ${deal.notes ? `
+          <div class="box">
+            <div class="box-title">📝 Notes</div>
+            ${deal.notes}
+          </div>
+          ` : ''}
+
           <table>
             <thead>
               <tr>
                 <th>Item Description</th>
                 <th>Quantity</th>
-                <th>Rate (₹)</th>
-                <th style="text-align: right;">Amount (₹)</th>
+                <th>Rate</th>
+                <th class="amount-cell">Amount</th>
               </tr>
             </thead>
             <tbody>
@@ -220,15 +244,16 @@ export const pdfExport = {
                   <strong>${deal.produceName || 'Agricultural Produce'}</strong><br>
                   <small style="color: #666;">Listing #${deal.listingId}</small>
                 </td>
-                <td>${deal.finalQuantity} ${deal.unit || 'units'}</td>
-                <td>₹${deal.finalPrice.toLocaleString('en-IN')}</td>
-                <td style="text-align: right;">₹${deal.totalAmount.toLocaleString('en-IN')}</td>
+                <td><strong>${formatINR(deal.finalQuantity)}</strong> ${deal.unit || 'units'}</td>
+                <td><span class="rupee">₹${formatINR(deal.finalPrice)}</span> per ${deal.unit || 'unit'}</td>
+                <td class="amount-cell"><span class="rupee">₹${formatINR(deal.totalAmount)}</span></td>
               </tr>
             </tbody>
           </table>
 
           <div class="total">
-            TOTAL AMOUNT: ₹${deal.totalAmount.toLocaleString('en-IN')}
+            <div style="font-size: 14px; font-weight: normal; margin-bottom: 10px; color: #666;">TOTAL AMOUNT PAYABLE</div>
+            <span class="rupee">₹${formatINR(deal.totalAmount)}</span>
           </div>
 
           <div class="qr">

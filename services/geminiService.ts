@@ -8,13 +8,13 @@ class GeminiService {
     private modelName = 'gemini-3-flash-preview';
 
     constructor() {
-        this.client = new GoogleGenAI({
-            apiKey: apiKey || '',
-        });
-
         if (!apiKey) {
-            console.warn("Gemini API Key is missing. AI features will not work.");
+            throw new Error("CRITICAL: Gemini API Key is missing. Set VITE_GEMINI_API_KEY in .env.local file. AI features cannot work without it.");
         }
+
+        this.client = new GoogleGenAI({
+            apiKey: apiKey,
+        });
     }
 
     async extractListingData(text: string, language?: SupportedLanguageCode): Promise<ListingData> {
@@ -143,13 +143,33 @@ class GeminiService {
 
     async searchAndRespond(prompt: string): Promise<any> {
         try {
+            // Priority 1: AI with Google Search Grounding for live data
             const response = await this.client.models.generateContent({
                 model: this.modelName,
                 contents: prompt,
+                config: {
+                    tools: [{ googleSearch: {} }]
+                }
             });
 
             return response.text || "";
-        } catch (error) {
+        } catch (error: any) {
+            // Check for Rate Limit / Quota Exceeded (429)
+            if (error?.message?.includes('429') || error?.status === 429 || error?.message?.includes('RESOURCE_EXHAUSTED')) {
+                console.warn("⚠️ Grounding quota exceeded. Retrying with base model (no search)...");
+                try {
+                    // Priority 2: Fallback to base model if search is limited
+                    const response = await this.client.models.generateContent({
+                        model: this.modelName,
+                        contents: prompt
+                    });
+                    return response.text || "";
+                } catch (retryError) {
+                    console.error("❌ Base model fallback also failed:", retryError);
+                    return "";
+                }
+            }
+
             console.error("Search error:", error);
             return "";
         }

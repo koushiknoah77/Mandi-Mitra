@@ -4,6 +4,7 @@ import { ListingCard } from './ListingCard';
 import { NegotiationView } from './NegotiationView';
 import { ProfileHistory } from './ProfileHistory';
 import { AnalyticsDashboard } from './AnalyticsDashboard';
+import { ErrorBoundary } from './ErrorBoundary';
 import { useListings } from '../contexts/ListingsContext';
 import { useFavorites } from '../hooks/useFavorites';
 import { useOfflineQueue } from '../hooks/useOfflineQueue';
@@ -266,13 +267,15 @@ export const BuyerDashboard: React.FC<BuyerDashboardProps> = ({ user }) => {
 
       {/* Negotiation Modal */}
       {activeNegotiation && (
-        <NegotiationView
-          listing={activeNegotiation}
-          userLanguage={user.language}
-          userRole={UserRole.BUYER}
-          user={user}
-          onClose={() => setActiveNegotiation(null)}
-        />
+        <ErrorBoundary>
+          <NegotiationView
+            listing={activeNegotiation}
+            userLanguage={user.language}
+            userRole={UserRole.BUYER}
+            user={user}
+            onClose={() => setActiveNegotiation(null)}
+          />
+        </ErrorBoundary>
       )}
 
       {/* Profile History Modal */}

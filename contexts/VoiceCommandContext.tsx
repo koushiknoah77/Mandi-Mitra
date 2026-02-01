@@ -43,19 +43,31 @@ export const VoiceCommandProvider: React.FC<{ children: React.ReactNode; languag
 
         if (transcript) {
             const normalizedTranscript = transcript.toLowerCase().trim();
+            const words = normalizedTranscript.split(/\s+/);
 
             // Try to find a matching command
             let foundCommand: VoiceCommand | null = null;
 
-            // 1. Exact or include match
+            // 1. Priority: Exact keyword matches (as a full word)
             foundCommand = commands.find(cmd =>
                 cmd.keywords.some(kw => {
                     const normalizedKw = kw.toLowerCase().trim();
-                    return normalizedTranscript === normalizedKw ||
-                        normalizedTranscript.includes(normalizedKw) ||
-                        normalizedKw.includes(normalizedTranscript);
+                    // Exact match
+                    if (normalizedTranscript === normalizedKw) return true;
+                    // Word match (ensure it's not a substring like 'rice' in 'price')
+                    return words.includes(normalizedKw);
                 })
             ) || null;
+
+            // 2. Secondary: If no exact word match, check for phrase inclusion (longer keywords)
+            if (!foundCommand) {
+                foundCommand = commands.find(cmd =>
+                    cmd.keywords.some(kw => {
+                        const normalizedKw = kw.toLowerCase().trim();
+                        return normalizedKw.length > 4 && normalizedTranscript.includes(normalizedKw);
+                    })
+                ) || null;
+            }
 
             if (foundCommand) {
                 setMatchedCommandId(foundCommand.id);
@@ -64,7 +76,7 @@ export const VoiceCommandProvider: React.FC<{ children: React.ReactNode; languag
                 return null; // Handled by command
             }
 
-            return transcript; // Return for local handling
+            return transcript; // Return for local handling (e.g. search query)
         }
         return null;
     };

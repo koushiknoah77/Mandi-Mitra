@@ -1247,7 +1247,9 @@ export function getFallbackResponse(
         const nextChars = string.substring(offset + match.length, offset + match.length + 10);
         return /^\d/.test(nextChars) ? match : '(';
       })
-      .replace(/₹\s+(?=[^\d])/g, '') // Remove ₹ followed by space and non-digit
+      // IMPROVED: Only remove ₹ if followed by 2+ spaces or end of string (not valid currency)
+      .replace(/₹\s{2,}/g, '') // Remove ₹ followed by 2+ spaces
+      .replace(/₹\s*$/g, '') // Remove ₹ at end of string
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
 

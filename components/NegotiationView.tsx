@@ -279,6 +279,7 @@ export const NegotiationView: React.FC<NegotiationViewProps> = ({ listing, userL
             status: 'completed',
             timestamp: Date.now(),
             produceName: listing.produceName,
+            unit: listing.unit,
             notes: buyerAsk
         };
 
